@@ -144,15 +144,21 @@ function App() {
         title="Grandes Modelos de Lenguaje (Infomed-GURU)"
       >
         <div className="modal-text">
-          <p><strong>Tecnología:</strong> Aplicación web que permite comparar respuestas de diferentes modelos de lenguaje en tiempo real.</p>
-          <p><strong>Modelos disponibles:</strong></p>
-          <ul>
-            <li>OpenAI: GPT-4 Mini y GPT-3.5 Turbo</li>
-            <li>Anthropic: Claude 3.5 Haiku y Claude 3.5 Sonnet</li>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: '#111827' }}>📋 Tecnología</h3>
+          <p style={{ marginLeft: '0.5rem' }}>Aplicación web que permite comparar respuestas de diferentes modelos de lenguaje en tiempo real.</p>
+        </div>
+        
+        <div className="modal-text">
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: '#111827' }}>🤖 Modelos disponibles</h3>
+          <ul style={{ marginLeft: '1.5rem' }}>
+            <li><strong>OpenAI:</strong> GPT-4 Mini y GPT-3.5 Turbo</li>
+            <li><strong>Anthropic:</strong> Claude 3.5 Haiku y Claude 3.5 Sonnet</li>
           </ul>
-          <p><strong>Creado por Alejandro Mauro utilizando Vibecoding</strong></p>
-          <p><strong>Funcionalidades:</strong></p>
-          <ul>
+        </div>
+
+        <div className="modal-text">
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: '#111827' }}>✨ Funcionalidades</h3>
+          <ul style={{ marginLeft: '1.5rem' }}>
             <li>Comparación simultánea de respuestas de dos LLM</li>
             <li>Selección dinámica de modelos</li>
             <li>Ajuste de temperatura para controlar la creatividad</li>
@@ -160,9 +166,16 @@ function App() {
             <li>Interfaz bilingüe optimizada</li>
           </ul>
         </div>
+
         <div className="modal-text">
-          <p><strong>Configuración:</strong></p>
-          <p>La temperatura controla la aleatoriedad de las respuestas (0 = más determinista, 1 = más creativo).</p>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: '#111827' }}>⚙️ Configuración</h3>
+          <p style={{ marginLeft: '0.5rem' }}>La temperatura controla la aleatoriedad de las respuestas (0 = más determinista, 1 = más creativo).</p>
+        </div>
+
+        <div className="modal-text" style={{ borderTop: '1px solid #e5e7eb', paddingTop: '1rem', marginTop: '1rem' }}>
+          <p style={{ textAlign: 'center', fontStyle: 'italic', color: '#6b7280' }}>
+            Creado por <strong style={{ color: '#111827' }}>Alejandro Mauro</strong> utilizando <strong style={{ color: '#2563eb' }}>Vibecoding</strong>
+          </p>
         </div>
       </Modal>
     </div>
