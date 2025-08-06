@@ -150,7 +150,7 @@ function App() {
             <li>OpenAI: GPT-4 Mini y GPT-3.5 Turbo</li>
             <li>Anthropic: Claude 3.5 Haiku y Claude 3.5 Sonnet</li>
           </ul>
-          <p><strong>Fecha de creación:</strong> 5 de Agosto de 2025 (creado por Alejandro Mauro)</p>
+          <p><strong>Creado por Alejandro Mauro utilizando Vibecoding</strong></p>
           <p><strong>Funcionalidades:</strong></p>
           <ul>
             <li>Comparación simultánea de respuestas de dos LLM</li>
