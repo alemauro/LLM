@@ -33,6 +33,7 @@ export class AnthropicService {
       let messageContent: any = request.prompt;
       
       if (request.files && request.files.length > 0) {
+        console.log(`🖼️ Anthropic: Processing ${request.files.length} files for LLM`);
         const contentArray: any[] = [];
         
         // Add text content
@@ -43,12 +44,25 @@ export class AnthropicService {
 
         // Add images and PDFs
         for (const file of request.files) {
+          console.log(`📁 Anthropic: Processing file ${file.name} (${file.type})`);
+          
           if (file.type === 'image' && file.base64) {
             // Extract media type and base64 data from data URL
             const mediaTypeMatch = file.base64.match(/data:([^;]+);base64,(.+)/);
             if (mediaTypeMatch) {
               const mediaType = mediaTypeMatch[1];
               const base64Data = mediaTypeMatch[2];
+              
+              console.log(`🖼️ Anthropic: Adding image ${file.name} to message (${mediaType})`);
+              console.log(`📊 Image base64 data length: ${base64Data.length}`);
+              console.log(`🔍 Extracted media_type for Anthropic: "${mediaType}"`);
+              
+              // Validate media type for Anthropic
+              const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+              if (!validTypes.includes(mediaType)) {
+                console.error(`❌ Anthropic: Invalid media_type "${mediaType}". Valid types: ${validTypes.join(', ')}`);
+                continue;
+              }
               
               contentArray.push({
                 type: "image",
@@ -58,13 +72,21 @@ export class AnthropicService {
                   data: base64Data
                 }
               });
+            } else {
+              console.error(`❌ Anthropic: Invalid base64 format for image ${file.name}`);
             }
+          } else if (file.type === 'image' && !file.base64) {
+            console.error(`❌ Anthropic: Image file ${file.name} is missing base64 data`);
           } else if (file.type === 'pdf' && file.text) {
+            console.log(`📄 Anthropic: Adding PDF text ${file.name} to message`);
+            console.log(`📊 PDF text length: ${file.text.length}`);
             // For PDFs, add the extracted text
             contentArray.push({
               type: "text",
               text: `Contenido del PDF "${file.name}":\n\n${file.text}`
             });
+          } else if (file.type === 'pdf' && !file.text) {
+            console.error(`❌ Anthropic: PDF file ${file.name} is missing text data`);
           }
         }
         
@@ -93,7 +115,11 @@ export class AnthropicService {
         data: {
           response,
           model,
-          temperature
+          temperature,
+          attachedFiles: request.files?.map(file => ({
+            name: file.name,
+            type: file.type
+          }))
         }
       };
     } catch (error) {
@@ -139,6 +165,7 @@ export class AnthropicService {
       let messageContent: any = request.prompt;
       
       if (request.files && request.files.length > 0) {
+        console.log(`🖼️ Anthropic Stream: Processing ${request.files.length} files for LLM`);
         const contentArray: any[] = [];
         
         // Add text content
@@ -149,12 +176,25 @@ export class AnthropicService {
 
         // Add images and PDFs
         for (const file of request.files) {
+          console.log(`📁 Anthropic Stream: Processing file ${file.name} (${file.type})`);
+          
           if (file.type === 'image' && file.base64) {
             // Extract media type and base64 data from data URL
             const mediaTypeMatch = file.base64.match(/data:([^;]+);base64,(.+)/);
             if (mediaTypeMatch) {
               const mediaType = mediaTypeMatch[1];
               const base64Data = mediaTypeMatch[2];
+              
+              console.log(`🖼️ Anthropic Stream: Adding image ${file.name} to message (${mediaType})`);
+              console.log(`📊 Image base64 data length: ${base64Data.length}`);
+              console.log(`🔍 Extracted media_type for Anthropic Stream: "${mediaType}"`);
+              
+              // Validate media type for Anthropic
+              const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+              if (!validTypes.includes(mediaType)) {
+                console.error(`❌ Anthropic Stream: Invalid media_type "${mediaType}". Valid types: ${validTypes.join(', ')}`);
+                continue;
+              }
               
               contentArray.push({
                 type: "image",
@@ -164,13 +204,21 @@ export class AnthropicService {
                   data: base64Data
                 }
               });
+            } else {
+              console.error(`❌ Anthropic Stream: Invalid base64 format for image ${file.name}`);
             }
+          } else if (file.type === 'image' && !file.base64) {
+            console.error(`❌ Anthropic Stream: Image file ${file.name} is missing base64 data`);
           } else if (file.type === 'pdf' && file.text) {
+            console.log(`📄 Anthropic Stream: Adding PDF text ${file.name} to message`);
+            console.log(`📊 PDF text length: ${file.text.length}`);
             // For PDFs, add the extracted text
             contentArray.push({
               type: "text",
               text: `Contenido del PDF "${file.name}":\n\n${file.text}`
             });
+          } else if (file.type === 'pdf' && !file.text) {
+            console.error(`❌ Anthropic Stream: PDF file ${file.name} is missing text data`);
           }
         }
         

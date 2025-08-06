@@ -50,9 +50,9 @@ export function canProcessFile(model: string, fileType: string, fileSize: number
 } {
   const capabilities = getModelCapabilities(model);
   
-  // Check if it's an image
+  // Check if it's an image (either generic "image" type or specific format)
   const imageFormats = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
-  const isImage = imageFormats.includes(fileType.toLowerCase());
+  const isImage = fileType.toLowerCase() === 'image' || imageFormats.includes(fileType.toLowerCase());
   
   // Check if it's a PDF
   const isPDF = fileType.toLowerCase() === 'pdf';
@@ -73,6 +73,7 @@ export function canProcessFile(model: string, fileType: string, fileSize: number
     }
     
     if (capabilities.supportedImageFormats && 
+        fileType.toLowerCase() !== 'image' &&
         !capabilities.supportedImageFormats.includes(fileType.toLowerCase())) {
       return { 
         canProcess: false, 

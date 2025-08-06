@@ -14,6 +14,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [responses, setResponses] = useState<DualLLMResponse | null>(null);
   const [streamingResponses, setStreamingResponses] = useState<{ openai: string; anthropic: string }>({ openai: '', anthropic: '' });
+  const [streamingFiles, setStreamingFiles] = useState<Array<{ name: string; type: 'image' | 'pdf' }>>();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [fileWarnings, setFileWarnings] = useState<string[]>([]);
   const useStreaming = true; // Always use streaming
@@ -31,6 +32,7 @@ function App() {
     setLoading(true);
     setResponses(null);
     setStreamingResponses({ openai: '', anthropic: '' });
+    setStreamingFiles(undefined);
     setFileWarnings([]);
     
     let fileIds: string[] = [];
@@ -75,6 +77,9 @@ function App() {
             },
             onAnthropicChunk: (chunk) => {
               setStreamingResponses(prev => ({ ...prev, anthropic: prev.anthropic + chunk }));
+            },
+            onFilesInfo: (files) => {
+              setStreamingFiles(files);
             },
             onError: (error) => {
               console.error('Streaming error:', error);
@@ -138,6 +143,7 @@ function App() {
               temperature={openaiTemperature}
               models={openaiModels}
               loading={loading}
+              attachedFiles={useStreaming ? streamingFiles : responses?.data?.openai.attachedFiles}
               onModelChange={setOpenaiModel}
               onTemperatureChange={setOpenaiTemperature}
             />
@@ -150,6 +156,7 @@ function App() {
               temperature={anthropicTemperature}
               models={anthropicModels}
               loading={loading}
+              attachedFiles={useStreaming ? streamingFiles : responses?.data?.anthropic.attachedFiles}
               onModelChange={setAnthropicModel}
               onTemperatureChange={setAnthropicTemperature}
             />

@@ -4,7 +4,7 @@ import { FileUploadService } from '../services/file-upload.service';
 import { canProcessFile } from '../config/model-capabilities';
 
 const router = Router();
-const fileUploadService = new FileUploadService();
+const fileUploadService = FileUploadService.getInstance();
 
 // Upload files endpoint
 router.post('/upload', 

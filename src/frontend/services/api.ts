@@ -5,6 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 interface StreamCallbacks {
   onOpenAIChunk?: (chunk: string) => void;
   onAnthropicChunk?: (chunk: string) => void;
+  onFilesInfo?: (files: Array<{ name: string; type: 'image' | 'pdf' }>) => void;
   onError?: (error: string) => void;
   onComplete?: () => void;
 }
@@ -73,6 +74,8 @@ export const api = {
                   callbacks.onError?.(parsed.error);
                 } else if (parsed.done) {
                   callbacks.onComplete?.();
+                } else if (parsed.type === 'files_info') {
+                  callbacks.onFilesInfo?.(parsed.files);
                 } else {
                   if (request.provider === 'dual') {
                     if (parsed.openai) {

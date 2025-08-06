@@ -33,6 +33,7 @@ export class OpenAIService {
       let messageContent: any = request.prompt;
       
       if (request.files && request.files.length > 0) {
+        console.log(`🖼️ OpenAI: Processing ${request.files.length} files for LLM`);
         messageContent = [
           {
             type: "text",
@@ -42,7 +43,12 @@ export class OpenAIService {
 
         // Add images to the message
         for (const file of request.files) {
+          console.log(`📁 OpenAI: Processing file ${file.name} (${file.type})`);
+          
           if (file.type === 'image' && file.base64) {
+            console.log(`🖼️ OpenAI: Adding image ${file.name} to message`);
+            console.log(`📊 Image base64 length: ${file.base64.length}`);
+            
             messageContent.push({
               type: "image_url",
               image_url: {
@@ -50,6 +56,8 @@ export class OpenAIService {
                 detail: "high"
               }
             });
+          } else if (file.type === 'image' && !file.base64) {
+            console.error(`❌ OpenAI: Image file ${file.name} is missing base64 data`);
           }
         }
       }
@@ -73,7 +81,11 @@ export class OpenAIService {
         data: {
           response,
           model,
-          temperature
+          temperature,
+          attachedFiles: request.files?.map(file => ({
+            name: file.name,
+            type: file.type
+          }))
         }
       };
     } catch (error) {
@@ -119,6 +131,7 @@ export class OpenAIService {
       let messageContent: any = request.prompt;
       
       if (request.files && request.files.length > 0) {
+        console.log(`🖼️ OpenAI Stream: Processing ${request.files.length} files for LLM`);
         messageContent = [
           {
             type: "text",
@@ -128,7 +141,12 @@ export class OpenAIService {
 
         // Add images to the message
         for (const file of request.files) {
+          console.log(`📁 OpenAI Stream: Processing file ${file.name} (${file.type})`);
+          
           if (file.type === 'image' && file.base64) {
+            console.log(`🖼️ OpenAI Stream: Adding image ${file.name} to message`);
+            console.log(`📊 Image base64 length: ${file.base64.length}`);
+            
             messageContent.push({
               type: "image_url",
               image_url: {
@@ -136,6 +154,8 @@ export class OpenAIService {
                 detail: "high"
               }
             });
+          } else if (file.type === 'image' && !file.base64) {
+            console.error(`❌ OpenAI Stream: Image file ${file.name} is missing base64 data`);
           }
         }
       }

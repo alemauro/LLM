@@ -21,6 +21,10 @@ export interface LLMResponse {
     temperature: number;
     filesProcessed?: boolean;
     fileWarnings?: string[];
+    attachedFiles?: Array<{
+      name: string;
+      type: 'image' | 'pdf';
+    }>;
   };
   error?: string;
 }
@@ -43,6 +47,10 @@ export interface DualLLMResponse {
       temperature: number;
       filesProcessed?: boolean;
       fileWarnings?: string[];
+      attachedFiles?: Array<{
+        name: string;
+        type: 'image' | 'pdf';
+      }>;
     };
     anthropic: {
       response: string;
@@ -50,6 +58,10 @@ export interface DualLLMResponse {
       temperature: number;
       filesProcessed?: boolean;
       fileWarnings?: string[];
+      attachedFiles?: Array<{
+        name: string;
+        type: 'image' | 'pdf';
+      }>;
     };
   };
   error?: string;

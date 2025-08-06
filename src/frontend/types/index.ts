@@ -13,11 +13,19 @@ export interface DualLLMResponse {
       response: string;
       model: string;
       temperature: number;
+      attachedFiles?: Array<{
+        name: string;
+        type: 'image' | 'pdf';
+      }>;
     };
     anthropic: {
       response: string;
       model: string;
       temperature: number;
+      attachedFiles?: Array<{
+        name: string;
+        type: 'image' | 'pdf';
+      }>;
     };
   };
   error?: string;

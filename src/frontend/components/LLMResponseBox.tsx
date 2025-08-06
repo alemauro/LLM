@@ -9,6 +9,10 @@ interface LLMResponseBoxProps {
   temperature: number;
   models: string[];
   loading: boolean;
+  attachedFiles?: Array<{
+    name: string;
+    type: 'image' | 'pdf';
+  }>;
   onModelChange: (model: string) => void;
   onTemperatureChange: (temperature: number) => void;
 }
@@ -21,6 +25,7 @@ const LLMResponseBox: React.FC<LLMResponseBoxProps> = ({
   temperature,
   models,
   loading,
+  attachedFiles,
   onModelChange,
   onTemperatureChange
 }) => {
@@ -111,6 +116,21 @@ const LLMResponseBox: React.FC<LLMResponseBoxProps> = ({
           </div>
         </div>
       </div>
+      
+      {attachedFiles && attachedFiles.length > 0 && (
+        <div className="attached-files-section">
+          <div className="attached-files-label">
+            📎 Archivos analizados:
+          </div>
+          <div className="attached-files-list">
+            {attachedFiles.map((file, index) => (
+              <span key={index} className="attached-file-item">
+                {file.type === 'image' ? '🖼️' : '📄'} {file.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       
       <div className="llm-response-content">
         {response ? (

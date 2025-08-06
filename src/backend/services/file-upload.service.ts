@@ -17,16 +17,24 @@ export interface ProcessedFile {
 }
 
 export class FileUploadService {
+  private static instance: FileUploadService;
   private uploadDir: string;
   private tempFiles: Map<string, ProcessedFile> = new Map();
 
-  constructor() {
+  private constructor() {
     // Use environment variable or default to local uploads directory
     this.uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
     this.ensureUploadDirectory();
     
     // Cleanup old files every hour
     setInterval(() => this.cleanupOldFiles(), 3600000);
+  }
+
+  static getInstance(): FileUploadService {
+    if (!FileUploadService.instance) {
+      FileUploadService.instance = new FileUploadService();
+    }
+    return FileUploadService.instance;
   }
 
   private ensureUploadDirectory(): void {
@@ -68,11 +76,22 @@ export class FileUploadService {
         throw new Error(`Tipo de archivo no soportado: ${fileType.mime}`);
       }
 
-      // Store file info temporarily
-      this.tempFiles.set(fileId, processedFile);
+      // Store file info temporarily with timestamp
+      const fileWithTimestamp = {
+        ...processedFile,
+        createdAt: Date.now()
+      };
+      
+      console.log(`💾 Storing file in tempFiles with ID: ${fileId}`);
+      this.tempFiles.set(fileId, fileWithTimestamp as ProcessedFile);
+      console.log(`📊 tempFiles size after storing: ${this.tempFiles.size}`);
+      console.log(`🔑 All stored file IDs:`, Array.from(this.tempFiles.keys()));
       
       // Schedule deletion after 10 minutes
-      setTimeout(() => this.deleteFile(fileId), 600000);
+      setTimeout(() => {
+        console.log(`⏰ Auto-deleting file ${fileId} after 10 minutes`);
+        this.deleteFile(fileId);
+      }, 600000);
 
       return processedFile;
     } catch (error) {
@@ -104,7 +123,12 @@ export class FileUploadService {
       // Convert to base64
       const buffer = await processedImage.toBuffer();
       const base64 = buffer.toString('base64');
-      const mimeType = `image/${format}`;
+      
+      // Normalize format for Anthropic compatibility (jpg -> jpeg)
+      const normalizedFormat = format === 'jpg' ? 'jpeg' : format;
+      const mimeType = `image/${normalizedFormat}`;
+      
+      console.log(`🖼️ Processing image with format: ${format} -> normalized: ${normalizedFormat} -> mimeType: ${mimeType}`);
       
       return `data:${mimeType};base64,${base64}`;
     } catch (error) {
@@ -137,7 +161,45 @@ export class FileUploadService {
   }
 
   getFile(fileId: string): ProcessedFile | undefined {
-    return this.tempFiles.get(fileId);
+    console.log(`🔎 FileUploadService.getFile() called with ID: ${fileId}`);
+    console.log(`📚 Current tempFiles size: ${this.tempFiles.size}`);
+    console.log(`🔑 Available file IDs:`, Array.from(this.tempFiles.keys()));
+    
+    const file = this.tempFiles.get(fileId);
+    
+    if (file) {
+      console.log(`📁 File found: ${file.originalName} (${file.type})`);
+      console.log(`📄 File details:`, {
+        id: file.id,
+        name: file.originalName,
+        type: file.type,
+        size: file.size,
+        hasBase64: !!file.base64,
+        base64Length: file.base64?.length,
+        hasText: !!file.text,
+        textLength: file.text?.length
+      });
+      
+      // Verify file integrity for LLM processing
+      if (file.type === 'image' && !file.base64) {
+        console.error(`⚠️ Image file ${file.originalName} is missing base64 data!`);
+        return undefined;
+      }
+      
+      if (file.type === 'pdf' && !file.text && !file.base64) {
+        console.error(`⚠️ PDF file ${file.originalName} is missing both text and base64 data!`);
+        return undefined;
+      }
+      
+    } else {
+      console.error(`❌ File with ID ${fileId} not found in tempFiles`);
+      console.log(`🔍 Debugging tempFiles contents:`);
+      for (const [id, fileInfo] of this.tempFiles.entries()) {
+        console.log(`  - ID: ${id}, File: ${fileInfo.originalName} (${fileInfo.type})`);
+      }
+    }
+    
+    return file;
   }
 
   deleteFile(fileId: string): void {
