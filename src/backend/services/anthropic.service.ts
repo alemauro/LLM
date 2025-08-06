@@ -29,12 +29,54 @@ export class AnthropicService {
       const model = request.model || 'claude-3-5-haiku-latest';
       const temperature = request.temperature ?? 0.7;
 
+      // Prepare message content - handle images and PDFs if present
+      let messageContent: any = request.prompt;
+      
+      if (request.files && request.files.length > 0) {
+        const contentArray: any[] = [];
+        
+        // Add text content
+        contentArray.push({
+          type: "text",
+          text: request.prompt
+        });
+
+        // Add images and PDFs
+        for (const file of request.files) {
+          if (file.type === 'image' && file.base64) {
+            // Extract media type and base64 data from data URL
+            const mediaTypeMatch = file.base64.match(/data:([^;]+);base64,(.+)/);
+            if (mediaTypeMatch) {
+              const mediaType = mediaTypeMatch[1];
+              const base64Data = mediaTypeMatch[2];
+              
+              contentArray.push({
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType,
+                  data: base64Data
+                }
+              });
+            }
+          } else if (file.type === 'pdf' && file.text) {
+            // For PDFs, add the extracted text
+            contentArray.push({
+              type: "text",
+              text: `Contenido del PDF "${file.name}":\n\n${file.text}`
+            });
+          }
+        }
+        
+        messageContent = contentArray;
+      }
+
       const message = await this.anthropic.messages.create({
         model: model,
         messages: [
           {
             role: 'user',
-            content: request.prompt
+            content: messageContent
           }
         ],
         temperature: temperature,
@@ -93,12 +135,54 @@ export class AnthropicService {
       res.setHeader('Connection', 'keep-alive');
       res.setHeader('Access-Control-Allow-Origin', '*');
 
+      // Prepare message content - handle images and PDFs if present
+      let messageContent: any = request.prompt;
+      
+      if (request.files && request.files.length > 0) {
+        const contentArray: any[] = [];
+        
+        // Add text content
+        contentArray.push({
+          type: "text",
+          text: request.prompt
+        });
+
+        // Add images and PDFs
+        for (const file of request.files) {
+          if (file.type === 'image' && file.base64) {
+            // Extract media type and base64 data from data URL
+            const mediaTypeMatch = file.base64.match(/data:([^;]+);base64,(.+)/);
+            if (mediaTypeMatch) {
+              const mediaType = mediaTypeMatch[1];
+              const base64Data = mediaTypeMatch[2];
+              
+              contentArray.push({
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType,
+                  data: base64Data
+                }
+              });
+            }
+          } else if (file.type === 'pdf' && file.text) {
+            // For PDFs, add the extracted text
+            contentArray.push({
+              type: "text",
+              text: `Contenido del PDF "${file.name}":\n\n${file.text}`
+            });
+          }
+        }
+        
+        messageContent = contentArray;
+      }
+
       const stream = await this.anthropic.messages.create({
         model: model,
         messages: [
           {
             role: 'user',
-            content: request.prompt
+            content: messageContent
           }
         ],
         temperature: temperature,

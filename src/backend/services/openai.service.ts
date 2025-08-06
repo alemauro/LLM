@@ -29,12 +29,37 @@ export class OpenAIService {
       const model = request.model || 'gpt-4o-mini-2024-07-18';
       const temperature = request.temperature ?? 0.7;
 
+      // Prepare message content - handle images if present
+      let messageContent: any = request.prompt;
+      
+      if (request.files && request.files.length > 0) {
+        messageContent = [
+          {
+            type: "text",
+            text: request.prompt
+          }
+        ];
+
+        // Add images to the message
+        for (const file of request.files) {
+          if (file.type === 'image' && file.base64) {
+            messageContent.push({
+              type: "image_url",
+              image_url: {
+                url: file.base64,
+                detail: "high"
+              }
+            });
+          }
+        }
+      }
+
       const completion = await this.openai.chat.completions.create({
         model: model,
         messages: [
           {
             role: 'user',
-            content: request.prompt
+            content: messageContent
           }
         ],
         temperature: temperature,
@@ -90,12 +115,37 @@ export class OpenAIService {
       res.setHeader('Connection', 'keep-alive');
       res.setHeader('Access-Control-Allow-Origin', '*');
 
+      // Prepare message content - handle images if present
+      let messageContent: any = request.prompt;
+      
+      if (request.files && request.files.length > 0) {
+        messageContent = [
+          {
+            type: "text",
+            text: request.prompt
+          }
+        ];
+
+        // Add images to the message
+        for (const file of request.files) {
+          if (file.type === 'image' && file.base64) {
+            messageContent.push({
+              type: "image_url",
+              image_url: {
+                url: file.base64,
+                detail: "high"
+              }
+            });
+          }
+        }
+      }
+
       const stream = await this.openai.chat.completions.create({
         model: model,
         messages: [
           {
             role: 'user',
-            content: request.prompt
+            content: messageContent
           }
         ],
         temperature: temperature,

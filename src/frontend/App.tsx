@@ -6,6 +6,7 @@ import LLMResponseBox from './components/LLMResponseBox';
 import { useStatistics } from './hooks/useStatistics';
 import { useModels } from './hooks/useModels';
 import { api } from './services/api';
+import { fileAPI, UploadedFile } from './services/file.api';
 import { DualLLMResponse } from './types';
 
 function App() {
@@ -13,6 +14,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [responses, setResponses] = useState<DualLLMResponse | null>(null);
   const [streamingResponses, setStreamingResponses] = useState<{ openai: string; anthropic: string }>({ openai: '', anthropic: '' });
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [fileWarnings, setFileWarnings] = useState<string[]>([]);
   const useStreaming = true; // Always use streaming
   
   // Configuración de modelos y temperaturas
@@ -24,10 +27,34 @@ function App() {
   const { statistics, refetch: refetchStatistics } = useStatistics();
   const { openaiModels, anthropicModels } = useModels();
 
-  const handlePromptSubmit = async (prompt: string) => {
+  const handlePromptSubmit = async (prompt: string, files?: File[]) => {
     setLoading(true);
     setResponses(null);
     setStreamingResponses({ openai: '', anthropic: '' });
+    setFileWarnings([]);
+    
+    let fileIds: string[] = [];
+    
+    // Upload files if provided
+    if (files && files.length > 0) {
+      try {
+        const uploadResponse = await fileAPI.uploadFiles(files);
+        if (uploadResponse.success && uploadResponse.data) {
+          setUploadedFiles(uploadResponse.data.files);
+          fileIds = uploadResponse.data.files.map(f => f.id);
+          
+          if (uploadResponse.data.errors && uploadResponse.data.errors.length > 0) {
+            const errorMessages = uploadResponse.data.errors.map(e => `${e.file}: ${e.error}`);
+            setFileWarnings(errorMessages);
+          }
+        } else {
+          setFileWarnings([uploadResponse.error || 'Error al subir archivos']);
+        }
+      } catch (error: any) {
+        console.error('File upload error:', error);
+        setFileWarnings(['Error al subir archivos']);
+      }
+    }
     
     try {
       if (useStreaming) {
@@ -39,7 +66,8 @@ function App() {
             openaiModel,
             anthropicModel,
             openaiTemperature,
-            anthropicTemperature
+            anthropicTemperature,
+            fileIds: fileIds.length > 0 ? fileIds : undefined
           },
           {
             onOpenAIChunk: (chunk) => {
@@ -69,7 +97,8 @@ function App() {
           openaiModel,
           anthropicModel,
           openaiTemperature,
-          anthropicTemperature
+          anthropicTemperature,
+          fileIds: fileIds.length > 0 ? fileIds : undefined
         });
         
         setResponses(response);
@@ -125,6 +154,17 @@ function App() {
               onTemperatureChange={setAnthropicTemperature}
             />
           </div>
+
+          {fileWarnings.length > 0 && (
+            <div className="file-status-message file-status-warning">
+              <strong>Advertencias de archivos:</strong>
+              <ul style={{ marginTop: '0.5rem', marginLeft: '1rem' }}>
+                {fileWarnings.map((warning, index) => (
+                  <li key={index}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {responses?.error && (
             <div className="error-message">

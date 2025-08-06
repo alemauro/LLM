@@ -31,6 +31,7 @@ export const api = {
       anthropicModel?: string;
       openaiTemperature?: number;
       anthropicTemperature?: number;
+      fileIds?: string[];
     },
     callbacks: StreamCallbacks
   ): Promise<void> {

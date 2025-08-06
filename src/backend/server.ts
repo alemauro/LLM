@@ -6,6 +6,7 @@ import * as dotenv from 'dotenv';
 import { HealthCheckResponse } from './types';
 import llmRoutes from './routes/llm.routes';
 import statisticsRoutes from './routes/statistics.routes';
+import uploadRoutes from './routes/upload.routes';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -25,6 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 // API Routes
 app.use('/api/llm', llmRoutes);
 app.use('/api/statistics', statisticsRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Health check
 app.get('/api/health', (_req: Request, res: Response) => {
@@ -57,8 +59,11 @@ const server = app.listen(PORT, host, () => {
   console.log('');
   console.log('📚 API Endpoints:');
   console.log(`   POST /api/llm/generate - Generar respuestas de LLM`);
+  console.log(`   POST /api/llm/stream - Stream de respuestas`);
   console.log(`   GET  /api/llm/models - Obtener modelos disponibles`);
   console.log(`   GET  /api/statistics - Obtener estadísticas`);
+  console.log(`   POST /api/upload/upload - Subir archivos`);
+  console.log(`   GET  /api/upload/file/:id - Obtener archivo`);
   console.log(`   GET  /api/health - Health check`);
 });
 

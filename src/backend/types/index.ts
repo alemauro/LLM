@@ -1,7 +1,16 @@
+export interface FileAttachment {
+  id: string;
+  name: string;
+  type: 'image' | 'pdf';
+  base64?: string;
+  text?: string;
+}
+
 export interface LLMRequest {
   prompt: string;
   temperature?: number;
   model?: string;
+  files?: FileAttachment[];
 }
 
 export interface LLMResponse {
@@ -10,6 +19,8 @@ export interface LLMResponse {
     response: string;
     model: string;
     temperature: number;
+    filesProcessed?: boolean;
+    fileWarnings?: string[];
   };
   error?: string;
 }
@@ -20,6 +31,7 @@ export interface DualLLMRequest {
   anthropicModel?: string;
   openaiTemperature?: number;
   anthropicTemperature?: number;
+  fileIds?: string[];
 }
 
 export interface DualLLMResponse {
@@ -29,11 +41,15 @@ export interface DualLLMResponse {
       response: string;
       model: string;
       temperature: number;
+      filesProcessed?: boolean;
+      fileWarnings?: string[];
     };
     anthropic: {
       response: string;
       model: string;
       temperature: number;
+      filesProcessed?: boolean;
+      fileWarnings?: string[];
     };
   };
   error?: string;
