@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM (Infomed Guru)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .controls {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls input, .controls select, .controls button {
+            margin: 5px;
+            padding: 8px;
+            font-size: 14px;
+        }
+        .controls input[type="text"] {
+            width: 300px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .responses {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .response-box {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+        }
+        .response-header {
+            padding: 15px 20px 10px 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .header-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .response-header h3 {
+            margin: 0;
+            color: #555;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .char-count-compact {
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-weight: 500;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            min-width: 35px;
+            text-align: center;
+        }
+        .copy-btn-compact {
+            width: 24px;
+            height: 24px;
+            background-color: rgba(37, 99, 235, 0.8);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+        .copy-btn-compact:hover {
+            background-color: #2563eb;
+            transform: scale(1.05);
+        }
+        .copy-btn-compact:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .response-body {
+            flex: 1;
+            padding: 20px;
+        }
+        .response-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Courier New', monospace;
+            line-height: 1.5;
+            min-height: 100px;
+        }
+        .typing-cursor {
+            display: inline-block;
+            animation: blink 1s infinite;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Grandes Modelos de Lenguaje (LLM)</h1>
+    
+    <div class="controls">
+        <input type="text" id="prompt" placeholder="Escribe tu prompt aquí..." value="Cuenta del 1 al 10">
+        <select id="provider">
+            <option value="dual">Dual (OpenAI + Anthropic)</option>
+            <option value="openai">Solo OpenAI</option>
+            <option value="anthropic">Solo Anthropic</option>
+        </select>
+        <button id="sendBtn" onclick="sendPrompt()">Enviar</button>
+        <button id="clearBtn" onclick="clearResponses()">Limpiar</button>
+    </div>
+    
+    <div class="responses">
+        <div class="response-box">
+            <div class="response-header">
+                <div class="header-top-row">
+                    <h3>OpenAI</h3>
+                    <div class="header-actions" id="openai-actions" style="display: none;">
+                        <span class="char-count-compact" id="openai-count">0</span>
+                        <button class="copy-btn-compact" onclick="copyResponse('openai')" title="Copiar">
+                            📋
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="response-body">
+                <div id="openai-response" class="response-content"></div>
+            </div>
+        </div>
+        <div class="response-box">
+            <div class="response-header">
+                <div class="header-top-row">
+                    <h3>Anthropic</h3>
+                    <div class="header-actions" id="anthropic-actions" style="display: none;">
+                        <span class="char-count-compact" id="anthropic-count">0</span>
+                        <button class="copy-btn-compact" onclick="copyResponse('anthropic')" title="Copiar">
+                            📋
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="response-body">
+                <div id="anthropic-response" class="response-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function sendPrompt() {
+            const prompt = document.getElementById('prompt').value;
+            const provider = document.getElementById('provider').value;
+            const sendBtn = document.getElementById('sendBtn');
+            const openaiDiv = document.getElementById('openai-response');
+            const anthropicDiv = document.getElementById('anthropic-response');
+            
+            if (!prompt) {
+                alert('Por favor, escribe un prompt');
+                return;
+            }
+            
+            // Limpiar respuestas anteriores y mostrar cursor
+            openaiDiv.innerHTML = '<span class="typing-cursor">▊</span>';
+            anthropicDiv.innerHTML = '<span class="typing-cursor">▊</span>';
+            document.getElementById('openai-actions').style.display = 'flex';
+            document.getElementById('anthropic-actions').style.display = 'flex';
+            updateCharCount('openai', 0);
+            updateCharCount('anthropic', 0);
+            sendBtn.disabled = true;
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/llm/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ prompt, provider })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                let openaiContent = '';
+                let anthropicContent = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data.trim()) {
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    
+                                    if (parsed.error) {
+                                        if (parsed.provider === 'openai') {
+                                            openaiDiv.innerHTML = `<span class="error">Error: ${parsed.error}</span>`;
+                                        } else if (parsed.provider === 'anthropic') {
+                                            anthropicDiv.innerHTML = `<span class="error">Error: ${parsed.error}</span>`;
+                                        }
+                                    } else if (!parsed.done) {
+                                        if (provider === 'dual') {
+                                            if (parsed.openai) {
+                                                openaiContent += parsed.openai;
+                                                openaiDiv.innerHTML = openaiContent + '<span class="typing-cursor">▊</span>';
+                                                updateCharCount('openai', openaiContent.length);
+                                            }
+                                            if (parsed.anthropic) {
+                                                anthropicContent += parsed.anthropic;
+                                                anthropicDiv.innerHTML = anthropicContent + '<span class="typing-cursor">▊</span>';
+                                                updateCharCount('anthropic', anthropicContent.length);
+                                            }
+                                        } else if (parsed.content) {
+                                            if (parsed.provider === 'openai') {
+                                                openaiContent += parsed.content;
+                                                openaiDiv.innerHTML = openaiContent + '<span class="typing-cursor">▊</span>';
+                                                updateCharCount('openai', openaiContent.length);
+                                                if (anthropicDiv.innerHTML === '<span class="typing-cursor">▊</span>') {
+                                                    anthropicDiv.innerHTML = '<span class="loading">No solicitado</span>';
+                                                }
+                                            } else if (parsed.provider === 'anthropic') {
+                                                anthropicContent += parsed.content;
+                                                anthropicDiv.innerHTML = anthropicContent + '<span class="typing-cursor">▊</span>';
+                                                updateCharCount('anthropic', anthropicContent.length);
+                                                if (openaiDiv.innerHTML === '<span class="typing-cursor">▊</span>') {
+                                                    openaiDiv.innerHTML = '<span class="loading">No solicitado</span>';
+                                                }
+                                            }
+                                        }
+                                    } else if (parsed.done) {
+                                        // Remover cursores cuando termine
+                                        if (openaiContent) {
+                                            openaiDiv.textContent = openaiContent;
+                                        }
+                                        if (anthropicContent) {
+                                            anthropicDiv.textContent = anthropicContent;
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing SSE data:', e);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                openaiDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+                anthropicDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+        
+        function clearResponses() {
+            document.getElementById('openai-response').innerHTML = '';
+            document.getElementById('anthropic-response').innerHTML = '';
+            document.getElementById('openai-actions').style.display = 'none';
+            document.getElementById('anthropic-actions').style.display = 'none';
+        }
+        
+        function updateCharCount(provider, count) {
+            document.getElementById(provider + '-count').textContent = count.toLocaleString();
+        }
+        
+        async function copyResponse(provider) {
+            const responseDiv = document.getElementById(provider + '-response');
+            const text = responseDiv.textContent.replace('▊', '').trim();
+            
+            if (!text) return;
+            
+            try {
+                await navigator.clipboard.writeText(text);
+                const btn = document.querySelector(`#${provider}-actions .copy-btn-compact`);
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✓';
+                btn.disabled = true;
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            } catch (err) {
+                console.error('Error copying to clipboard:', err);
+                alert('Error al copiar al portapapeles');
+            }
+        }
+        
+        // Permitir enviar con Enter
+        document.getElementById('prompt').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !document.getElementById('sendBtn').disabled) {
+                sendPrompt();
+            }
+        });
+    </script>
+</body>
+</html>

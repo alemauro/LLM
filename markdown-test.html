@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Test - LLM (Infomed Guru)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .test-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Prueba del Renderizador de Markdown</h1>
+    
+    <div class="test-container">
+        <h2>Ejemplos de Markdown para Probar</h2>
+        <button class="test-button" onclick="testBasicFormatting()">Formato Básico</button>
+        <button class="test-button" onclick="testCodeBlocks()">Bloques de Código</button>
+        <button class="test-button" onclick="testTables()">Tablas</button>
+        <button class="test-button" onclick="testMath()">Matemáticas</button>
+        <button class="test-button" onclick="testComplete()">Ejemplo Completo</button>
+    </div>
+
+    <div class="test-container">
+        <label for="prompt">Prompt de prueba:</label>
+        <input type="text" id="prompt" style="width: 100%; padding: 8px; margin: 10px 0;" 
+               placeholder="Escribe aquí o usa los botones de ejemplo">
+        <button class="test-button" onclick="sendTestPrompt()" style="margin-left: 0;">Enviar Prueba</button>
+    </div>
+
+    <div class="test-container">
+        <h3>Resultado:</h3>
+        <div id="result" style="border: 1px solid #ddd; padding: 15px; min-height: 200px; background: #fafafa;">
+            Aquí aparecerá el resultado del markdown renderizado...
+        </div>
+    </div>
+
+    <script>
+        function testBasicFormatting() {
+            const markdown = `# Encabezado Principal
+
+## Encabezado Secundario
+
+### Encabezado Terciario
+
+Este es un párrafo con **texto en negrita** y *texto en cursiva*.
+
+También puedes tener ~~texto tachado~~ y \`código inline\`.
+
+> Este es un blockquote
+> con múltiples líneas
+> para mostrar el formato.
+
+- Lista sin orden
+- Segundo elemento
+  - Sub-elemento
+  - Otro sub-elemento
+
+1. Lista ordenada
+2. Segundo elemento
+3. Tercer elemento
+
+---
+
+[Enlace a Google](https://google.com)`;
+            
+            document.getElementById('prompt').value = markdown;
+        }
+
+        function testCodeBlocks() {
+            const markdown = `# Ejemplos de Código
+
+## JavaScript
+\`\`\`javascript
+function fibonacci(n) {
+    if (n <= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+console.log(fibonacci(10));
+\`\`\`
+
+## Python
+\`\`\`python
+def quick_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    
+    pivot = arr[len(arr) // 2]
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    
+    return quick_sort(left) + middle + quick_sort(right)
+
+print(quick_sort([3,6,8,10,1,2,1]))
+\`\`\`
+
+## SQL
+\`\`\`sql
+SELECT u.name, COUNT(p.id) as post_count
+FROM users u
+LEFT JOIN posts p ON u.id = p.user_id
+WHERE u.created_at > '2023-01-01'
+GROUP BY u.id, u.name
+ORDER BY post_count DESC
+LIMIT 10;
+\`\`\``;
+            
+            document.getElementById('prompt').value = markdown;
+        }
+
+        function testTables() {
+            const markdown = `# Tablas en Markdown
+
+| Modelo | Proveedor | Parámetros | Velocidad | Precio |
+|--------|-----------|------------|-----------|--------|
+| GPT-4 | OpenAI | 175B | ⭐⭐⭐ | $$$$ |
+| GPT-3.5 Turbo | OpenAI | 175B | ⭐⭐⭐⭐⭐ | $$ |
+| Claude 3.5 Haiku | Anthropic | ? | ⭐⭐⭐⭐ | $$ |
+| Claude 3.5 Sonnet | Anthropic | ? | ⭐⭐⭐ | $$$ |
+
+## Tabla de Comparación de Lenguajes
+
+| Lenguaje | Tipado | Paradigma | Dificultad | Popularidad |
+|:---------|:------:|:---------:|-----------:|-------------|
+| Python | Dinámico | Multi-paradigma | Fácil | ⭐⭐⭐⭐⭐ |
+| JavaScript | Dinámico | Multi-paradigma | Media | ⭐⭐⭐⭐⭐ |
+| TypeScript | Estático | Multi-paradigma | Media | ⭐⭐⭐⭐ |
+| Rust | Estático | Sistemas | Difícil | ⭐⭐⭐ |
+| Go | Estático | Procedural | Fácil | ⭐⭐⭐⭐ |`;
+            
+            document.getElementById('prompt').value = markdown;
+        }
+
+        function testMath() {
+            const markdown = `# Matemáticas con LaTeX
+
+## Fórmulas Inline
+La ecuación de Einstein es $E = mc^2$, y la identidad de Euler es $e^{i\\pi} + 1 = 0$.
+
+## Fórmulas en Bloque
+
+### Ecuación Cuadrática
+$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$
+
+### Integral Definida
+$$\\int_{a}^{b} f(x) dx = F(b) - F(a)$$
+
+### Serie de Taylor
+$$f(x) = \\sum_{n=0}^{\\infty} \\frac{f^{(n)}(a)}{n!}(x-a)^n$$
+
+### Matriz
+$$\\begin{pmatrix}
+a & b \\\\
+c & d
+\\end{pmatrix}
+\\begin{pmatrix}
+x \\\\
+y
+\\end{pmatrix}
+=
+\\begin{pmatrix}
+ax + by \\\\
+cx + dy
+\\end{pmatrix}$$
+
+### Límite
+$$\\lim_{x \\to \\infty} \\frac{1}{x} = 0$$`;
+            
+            document.getElementById('prompt').value = markdown;
+        }
+
+        function testComplete() {
+            const markdown = `# Guía Completa de Machine Learning
+
+## Introducción
+
+El **Machine Learning** es una rama de la *Inteligencia Artificial* que permite a las máquinas aprender patrones sin ser programadas explícitamente.
+
+### Tipos Principales
+
+1. **Aprendizaje Supervisado**
+   - Clasificación
+   - Regresión
+2. **Aprendizaje No Supervisado**
+   - Clustering
+   - Reducción de dimensionalidad
+3. **Aprendizaje por Refuerzo**
+
+---
+
+## Algoritmos Populares
+
+| Algoritmo | Tipo | Complejidad | Uso Común |
+|-----------|------|-------------|-----------|
+| Linear Regression | Supervisado | O(n) | Predicción numérica |
+| Random Forest | Supervisado | O(n log n) | Clasificación |
+| K-Means | No supervisado | O(n²k) | Clustering |
+
+## Ejemplo de Código
+
+### Regresión Linear en Python
+
+\`\`\`python
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+
+# Generar datos sintéticos
+X = np.random.randn(100, 1)
+y = 2 * X.flatten() + np.random.randn(100) * 0.1
+
+# Dividir datos
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+# Entrenar modelo
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Evaluar
+score = model.score(X_test, y_test)
+print(f"R² Score: {score:.4f}")
+\`\`\`
+
+## Matemáticas Clave
+
+### Función de Costo (MSE)
+$$MSE = \\frac{1}{n} \\sum_{i=1}^{n} (y_i - \\hat{y}_i)^2$$
+
+### Gradiente Descendiente
+$$\\theta_{j} := \\theta_{j} - \\alpha \\frac{\\partial J(\\theta)}{\\partial \\theta_{j}}$$
+
+## Referencias
+
+> "Machine Learning is the field of study that gives computers the ability to learn without being explicitly programmed." - Arthur Samuel
+
+Para más información, consulta:
+- [Scikit-Learn Documentation](https://scikit-learn.org/)
+- [Deep Learning Book](https://www.deeplearningbook.org/)
+
+---
+
+*¡Feliz aprendizaje!* 🤖📚`;
+            
+            document.getElementById('prompt').value = markdown;
+        }
+
+        async function sendTestPrompt() {
+            const prompt = document.getElementById('prompt').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!prompt.trim()) {
+                alert('Por favor, escribe un prompt o usa uno de los ejemplos.');
+                return;
+            }
+
+            resultDiv.innerHTML = '<p><em>Enviando prompt de prueba...</em></p>';
+
+            try {
+                const response = await fetch('http://localhost:3000/api/llm/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        prompt: "Renderiza este markdown exactamente como está escrito:\\n\\n" + prompt, 
+                        provider: 'openai' 
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(\`HTTP error! status: \${response.status}\`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let content = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data.trim()) {
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.content) {
+                                        content += parsed.content;
+                                        // Aquí se mostraría con el renderizador de markdown real
+                                        resultDiv.innerHTML = \`<pre style="white-space: pre-wrap; font-family: inherit;">\${content}</pre>\`;
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing SSE data:', e);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                resultDiv.innerHTML = \`<div style="border: 1px solid #ccc; padding: 10px; background: white;">
+                    <strong>Contenido recibido:</strong><br><pre style="white-space: pre-wrap; font-size: 0.9em;">\${content}</pre>
+                    <br><strong>Nota:</strong> En la aplicación real, esto se renderizaría como markdown con sintaxis highlighting, tablas, matemáticas, etc.
+                </div>\`;
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = \`<p style="color: red;">Error: \${error.message}</p>\`;
+            }
+        }
+
+        // Cargar ejemplo básico por defecto
+        window.onload = function() {
+            testBasicFormatting();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<svg width="300" height="80" viewBox="0 0 300 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- Icono combinado de salud y tecnología -->
+  <g id="icon">
+    <!-- Cruz médica con circuito -->
+    <rect x="15" y="25" width="30" height="30" rx="2" fill="#00BFA5" opacity="0.1"/>
+    
+    <!-- Cruz médica -->
+    <rect x="25" y="30" width="10" height="20" fill="#00BFA5"/>
+    <rect x="20" y="35" width="20" height="10" fill="#00BFA5"/>
+    
+    <!-- Elementos de circuito -->
+    <circle cx="20" cy="35" r="2" fill="#673AB7"/>
+    <circle cx="40" cy="35" r="2" fill="#673AB7"/>
+    <circle cx="30" cy="30" r="2" fill="#673AB7"/>
+    <circle cx="30" cy="50" r="2" fill="#673AB7"/>
+    
+    <!-- Líneas de conexión -->
+    <path d="M20 35 L15 35 M40 35 L45 35 M30 30 L30 25 M30 50 L30 55" 
+          stroke="#673AB7" stroke-width="1" opacity="0.6"/>
+  </g>
+  
+  <!-- Texto principal -->
+  <text x="60" y="42" font-family="Arial, sans-serif" font-size="28" font-weight="bold">
+    <tspan fill="#1A237E">Cursos</tspan>
+    <tspan fill="#00BFA5"> Informed</tspan>
+  </text>
+  
+  <!-- Subtítulo -->
+  <text x="60" y="58" font-family="Arial, sans-serif" font-size="12" fill="#666666">
+    Informática en Salud • Talleres de IA
+  </text>
+  
+  <!-- Elemento decorativo -->
+  <rect x="60" y="62" width="180" height="2" fill="url(#gradient)" rx="1"/>
+  
+  <!-- Gradiente -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#673AB7;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#00BFA5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1A237E;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>
