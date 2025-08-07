@@ -3,7 +3,9 @@ import { api } from '../services/api';
 
 export const useModels = () => {
   const [openaiModels, setOpenaiModels] = useState<string[]>([]);
+  const [geminiModels, setGeminiModels] = useState<string[]>([]);
   const [anthropicModels, setAnthropicModels] = useState<string[]>([]);
+  const [grokModels, setGrokModels] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -13,7 +15,9 @@ export const useModels = () => {
         const response = await api.getModels();
         if (response.success && response.data) {
           setOpenaiModels(response.data.openai);
+          setGeminiModels(response.data.gemini);
           setAnthropicModels(response.data.anthropic);
+          setGrokModels(response.data.grok);
         }
       } catch (error) {
         console.error('Error fetching models:', error);
@@ -27,7 +31,9 @@ export const useModels = () => {
 
   return {
     openaiModels,
+    geminiModels,
     anthropicModels,
+    grokModels,
     loading
   };
 };

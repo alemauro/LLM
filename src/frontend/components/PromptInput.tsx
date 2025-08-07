@@ -3,10 +3,12 @@ import FileUpload from './FileUpload';
 
 interface PromptInputProps {
   onSubmit: (prompt: string, files?: File[]) => void;
+  onCancel?: () => void;
   loading: boolean;
+  canCancel?: boolean;
 }
 
-const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, loading }) => {
+const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, onCancel, loading, canCancel }) => {
   const [prompt, setPrompt] = useState('');
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -73,6 +75,17 @@ const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, loading }) => {
         >
           {loading ? 'Generando...' : 'Generar'}
         </button>
+        
+        {loading && canCancel && onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="cancel-button"
+          >
+            🛑 Cancelar
+          </button>
+        )}
+        
         <button
           type="button"
           onClick={() => {

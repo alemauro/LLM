@@ -31,17 +31,27 @@ export interface LLMResponse {
 
 export interface DualLLMRequest {
   prompt: string;
+  // First box models (OpenAI or Gemini)
+  firstProvider?: 'openai' | 'gemini';
   openaiModel?: string;
-  anthropicModel?: string;
+  geminiModel?: string;
   openaiTemperature?: number;
+  geminiTemperature?: number;
+  // Second box models (Anthropic or Grok)
+  secondProvider?: 'anthropic' | 'grok';
+  anthropicModel?: string;
+  grokModel?: string;
   anthropicTemperature?: number;
+  grokTemperature?: number;
+  // Legacy compatibility
   fileIds?: string[];
 }
 
 export interface DualLLMResponse {
   success: boolean;
   data?: {
-    openai: {
+    first: {
+      provider: 'openai' | 'gemini';
       response: string;
       model: string;
       temperature: number;
@@ -52,7 +62,8 @@ export interface DualLLMResponse {
         type: 'image' | 'pdf';
       }>;
     };
-    anthropic: {
+    second: {
+      provider: 'anthropic' | 'grok';
       response: string;
       model: string;
       temperature: number;

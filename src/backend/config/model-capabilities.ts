@@ -20,6 +20,22 @@ export const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
     supportsPDF: false
   },
   
+  // Gemini Models
+  'gemini-2.0-flash-lite': {
+    supportsVision: true,
+    supportsPDF: true,
+    maxImageSize: 10,
+    maxPDFSize: 20,
+    supportedImageFormats: ['jpeg', 'jpg', 'png', 'gif', 'webp']
+  },
+  'gemini-2.0-flash': {
+    supportsVision: true,
+    supportsPDF: true,
+    maxImageSize: 15,
+    maxPDFSize: 30,
+    supportedImageFormats: ['jpeg', 'jpg', 'png', 'gif', 'webp']
+  },
+  
   // Anthropic Models
   'claude-3-5-haiku-latest': {
     supportsVision: true,
@@ -33,6 +49,21 @@ export const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
     supportsPDF: true,
     maxImageSize: 5,
     maxPDFSize: 10,
+    supportedImageFormats: ['jpeg', 'jpg', 'png', 'gif', 'webp']
+  },
+  
+  // Grok Models
+  'grok-3-mini-fast': {
+    supportsVision: false,
+    supportsPDF: true,
+    maxPDFSize: 25,
+    supportedImageFormats: []
+  },
+  'grok-2-vision-1212': {
+    supportsVision: true,
+    supportsPDF: true,
+    maxImageSize: 20,
+    maxPDFSize: 25,
     supportedImageFormats: ['jpeg', 'jpg', 'png', 'gif', 'webp']
   }
 };
@@ -106,4 +137,50 @@ export function canProcessFile(model: string, fileType: string, fileSize: number
     canProcess: false, 
     reason: `Tipo de archivo ${fileType} no soportado` 
   };
+}
+
+export function getProviderModels(provider: 'openai' | 'gemini' | 'anthropic' | 'grok'): string[] {
+  const models = Object.keys(MODEL_CAPABILITIES);
+  
+  switch (provider) {
+    case 'openai':
+      return models.filter(model => model.startsWith('gpt-'));
+    case 'gemini':
+      return models.filter(model => model.startsWith('gemini-'));
+    case 'anthropic':
+      return models.filter(model => model.startsWith('claude-'));
+    case 'grok':
+      return models.filter(model => model.startsWith('grok-'));
+    default:
+      return [];
+  }
+}
+
+export function getBestModelForFiles(provider: 'openai' | 'gemini' | 'anthropic' | 'grok', files: Array<{ type: string }>, currentModel?: string): string {
+  const providerModels = getProviderModels(provider);
+  
+  if (!files || files.length === 0) {
+    return currentModel || providerModels[0];
+  }
+  
+  const hasImages = files.some(file => file.type === 'image');
+  const hasPDFs = files.some(file => file.type === 'pdf');
+  
+  // Find the best model that supports the required capabilities
+  for (const model of providerModels) {
+    const capabilities = getModelCapabilities(model);
+    
+    if (hasImages && !capabilities.supportsVision) {
+      continue;
+    }
+    
+    if (hasPDFs && !capabilities.supportsPDF) {
+      continue;
+    }
+    
+    return model;
+  }
+  
+  // Fallback to current model or first available
+  return currentModel || providerModels[0];
 }

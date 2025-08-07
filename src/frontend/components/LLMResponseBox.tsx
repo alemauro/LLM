@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import MarkdownRenderer from './SimpleMarkdownRenderer';
 
 interface LLMResponseBoxProps {
-  title: string;
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'grok';
+  availableProviders: Array<'openai' | 'anthropic' | 'gemini' | 'grok'>;
   response: string;
   model: string;
   temperature: number;
@@ -13,19 +13,21 @@ interface LLMResponseBoxProps {
     name: string;
     type: 'image' | 'pdf';
   }>;
+  onProviderChange: (provider: 'openai' | 'anthropic' | 'gemini' | 'grok') => void;
   onModelChange: (model: string) => void;
   onTemperatureChange: (temperature: number) => void;
 }
 
 const LLMResponseBox: React.FC<LLMResponseBoxProps> = ({
-  title,
   provider,
+  availableProviders,
   response,
   model,
   temperature,
   models,
   loading,
   attachedFiles,
+  onProviderChange,
   onModelChange,
   onTemperatureChange
 }) => {
@@ -33,12 +35,23 @@ const LLMResponseBox: React.FC<LLMResponseBoxProps> = ({
 
   const providerColors = {
     openai: 'border-green-500',
-    anthropic: 'border-orange-500'
+    anthropic: 'border-orange-500',
+    gemini: 'border-blue-500',
+    grok: 'border-purple-500'
   };
 
   const providerBg = {
     openai: 'bg-green-50',
-    anthropic: 'bg-orange-50'
+    anthropic: 'bg-orange-50',
+    gemini: 'bg-blue-50',
+    grok: 'bg-purple-50'
+  };
+
+  const providerNames = {
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    gemini: 'Gemini',
+    grok: 'Grok'
   };
 
   const copyToClipboard = async () => {
@@ -59,7 +72,17 @@ const LLMResponseBox: React.FC<LLMResponseBoxProps> = ({
     <div className={`llm-response-box ${providerColors[provider]}`}>
       <div className={`llm-response-header ${providerBg[provider]}`}>
         <div className="header-top-row">
-          <h3 className="llm-response-title">{title}</h3>
+          <div className="provider-title-selector">
+            <select 
+              value={provider}
+              onChange={(e) => onProviderChange(e.target.value as any)}
+              className="provider-title-select"
+            >
+              {availableProviders.map(p => (
+                <option key={p} value={p}>{providerNames[p]}</option>
+              ))}
+            </select>
+          </div>
           <div className="header-actions">
             {(response || loading) && (
               <>

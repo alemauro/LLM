@@ -1,15 +1,22 @@
 export interface DualLLMRequest {
   prompt: string;
+  firstProvider?: 'openai' | 'gemini';
   openaiModel?: string;
-  anthropicModel?: string;
+  geminiModel?: string;
   openaiTemperature?: number;
+  geminiTemperature?: number;
+  secondProvider?: 'anthropic' | 'grok';
+  anthropicModel?: string;
+  grokModel?: string;
   anthropicTemperature?: number;
+  grokTemperature?: number;
 }
 
 export interface DualLLMResponse {
   success: boolean;
   data?: {
-    openai: {
+    first: {
+      provider: 'openai' | 'gemini';
       response: string;
       model: string;
       temperature: number;
@@ -18,7 +25,8 @@ export interface DualLLMResponse {
         type: 'image' | 'pdf';
       }>;
     };
-    anthropic: {
+    second: {
+      provider: 'anthropic' | 'grok';
       response: string;
       model: string;
       temperature: number;
@@ -40,6 +48,8 @@ export interface ModelsResponse {
   success: boolean;
   data?: {
     openai: string[];
+    gemini: string[];
     anthropic: string[];
+    grok: string[];
   };
 }

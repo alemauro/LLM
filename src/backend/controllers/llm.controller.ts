@@ -1,23 +1,29 @@
 import { Request, Response } from 'express';
 import { OpenAIService } from '../services/openai.service';
 import { AnthropicService } from '../services/anthropic.service';
+import { GeminiService } from '../services/gemini.service';
+import { GrokService } from '../services/grok.service';
 import { StatisticsService } from '../services/statistics.service';
 import { StreamHelper } from '../services/stream-helper';
 import { DualLLMRequest, DualLLMResponse, FileAttachment } from '../types';
 import { FileUploadService } from '../services/file-upload.service';
-import { canProcessFile } from '../config/model-capabilities';
+import { canProcessFile, getBestModelForFiles } from '../config/model-capabilities';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 
 export class LLMController {
   private openaiService: OpenAIService;
   private anthropicService: AnthropicService;
+  private geminiService: GeminiService;
+  private grokService: GrokService;
   private statisticsService: StatisticsService;
   private fileUploadService: FileUploadService;
 
   constructor() {
     this.openaiService = new OpenAIService();
     this.anthropicService = new AnthropicService();
+    this.geminiService = new GeminiService();
+    this.grokService = new GrokService();
     this.statisticsService = StatisticsService.getInstance();
     this.fileUploadService = FileUploadService.getInstance();
 
@@ -120,66 +126,109 @@ export class LLMController {
         console.log(`📁 Processed ${files.length} files successfully`);
       }
 
+      // Determine active models and providers
+      const firstProvider = request.firstProvider || 'openai';
+      const secondProvider = request.secondProvider || 'anthropic';
+      
+      // Get the requested models
+      const requestedFirstModel = firstProvider === 'openai' ? 
+        (request.openaiModel || 'gpt-4o-mini-2024-07-18') : 
+        (request.geminiModel || 'gemini-2.0-flash-lite');
+        
+      const requestedSecondModel = secondProvider === 'anthropic' ? 
+        (request.anthropicModel || 'claude-3-5-haiku-latest') : 
+        (request.grokModel || 'grok-3-mini-fast');
+      
+      // Auto-select best models for files if needed
+      const firstModel = getBestModelForFiles(firstProvider, files, requestedFirstModel);
+      const secondModel = getBestModelForFiles(secondProvider, files, requestedSecondModel);
+      
+      // Log model selection if it changed
+      if (firstModel !== requestedFirstModel) {
+        console.log(`🔄 Auto-selected ${firstModel} instead of ${requestedFirstModel} for ${firstProvider} due to file requirements`);
+      }
+      if (secondModel !== requestedSecondModel) {
+        console.log(`🔄 Auto-selected ${secondModel} instead of ${requestedSecondModel} for ${secondProvider} due to file requirements`);
+      }
+
       // Check file compatibility with models
-      const openaiModelSupport = files.length > 0 ? 
-        this.checkModelFileSupport(request.openaiModel || 'gpt-4o-mini-2024-07-18', files) : 
+      const firstModelSupport = files.length > 0 ? 
+        this.checkModelFileSupport(firstModel, files) : 
         { canProcess: true, warnings: [] };
       
-      const anthropicModelSupport = files.length > 0 ? 
-        this.checkModelFileSupport(request.anthropicModel || 'claude-3-5-haiku-latest', files) : 
+      const secondModelSupport = files.length > 0 ? 
+        this.checkModelFileSupport(secondModel, files) : 
         { canProcess: true, warnings: [] };
 
-      console.log(`🤖 OpenAI model support:`, openaiModelSupport);
-      console.log(`🤖 Anthropic model support:`, anthropicModelSupport);
+      console.log(`🤖 First provider (${firstProvider}) model support:`, firstModelSupport);
+      console.log(`🤖 Second provider (${secondProvider}) model support:`, secondModelSupport);
 
-      // Ejecutar ambas llamadas en paralelo
-      const [openaiResponse, anthropicResponse] = await Promise.all([
-        this.openaiService.generateResponse({
+      // Execute both calls in parallel based on selected providers
+      const firstService = firstProvider === 'openai' ? this.openaiService : this.geminiService;
+      const secondService = secondProvider === 'anthropic' ? this.anthropicService : this.grokService;
+      
+      const firstTemperature = firstProvider === 'openai' ? 
+        (request.openaiTemperature || 0.7) : 
+        (request.geminiTemperature || 0.7);
+        
+      const secondTemperature = secondProvider === 'anthropic' ? 
+        (request.anthropicTemperature || 0.7) : 
+        (request.grokTemperature || 0.7);
+
+      const [firstResponse, secondResponse] = await Promise.all([
+        firstService.generateResponse({
           prompt: request.prompt,
-          model: request.openaiModel,
-          temperature: request.openaiTemperature,
-          files: openaiModelSupport.canProcess ? files : undefined
+          model: firstModel,
+          temperature: firstTemperature,
+          files: firstModelSupport.canProcess ? files : undefined
         }),
-        this.anthropicService.generateResponse({
+        secondService.generateResponse({
           prompt: request.prompt,
-          model: request.anthropicModel,
-          temperature: request.anthropicTemperature,
-          files: anthropicModelSupport.canProcess ? files : undefined
+          model: secondModel,
+          temperature: secondTemperature,
+          files: secondModelSupport.canProcess ? files : undefined
         })
       ]);
 
       // Incrementar estadísticas
       this.statisticsService.incrementPromptCount();
 
+      console.log(`🔍 Controller: First provider (${firstProvider}) attachedFiles:`, firstResponse.data?.attachedFiles);
+      console.log(`🔍 Controller: Second provider (${secondProvider}) attachedFiles:`, secondResponse.data?.attachedFiles);
+
       const response: DualLLMResponse = {
         success: true,
         data: {
-          openai: openaiResponse.success && openaiResponse.data ? {
-            response: openaiResponse.data.response,
-            model: openaiResponse.data.model,
-            temperature: openaiResponse.data.temperature,
-            filesProcessed: openaiModelSupport.canProcess && files.length > 0,
-            fileWarnings: openaiModelSupport.warnings.length > 0 ? openaiModelSupport.warnings : undefined,
-            attachedFiles: openaiResponse.data.attachedFiles
+          first: firstResponse.success && firstResponse.data ? {
+            provider: firstProvider,
+            response: firstResponse.data.response,
+            model: firstResponse.data.model,
+            temperature: firstResponse.data.temperature,
+            filesProcessed: firstModelSupport.canProcess && files.length > 0,
+            fileWarnings: firstModelSupport.warnings.length > 0 ? firstModelSupport.warnings : undefined,
+            attachedFiles: firstResponse.data.attachedFiles
           } : {
-            response: openaiResponse.error || 'Error desconocido',
-            model: request.openaiModel || 'gpt-4o-mini-2024-07-18',
-            temperature: request.openaiTemperature || 0.7,
-            fileWarnings: openaiModelSupport.warnings.length > 0 ? openaiModelSupport.warnings : undefined,
+            provider: firstProvider,
+            response: firstResponse.error || 'Error desconocido',
+            model: firstModel,
+            temperature: firstTemperature,
+            fileWarnings: firstModelSupport.warnings.length > 0 ? firstModelSupport.warnings : undefined,
             attachedFiles: files.length > 0 ? files.map(file => ({ name: file.name, type: file.type })) : undefined
           },
-          anthropic: anthropicResponse.success && anthropicResponse.data ? {
-            response: anthropicResponse.data.response,
-            model: anthropicResponse.data.model,
-            temperature: anthropicResponse.data.temperature,
-            filesProcessed: anthropicModelSupport.canProcess && files.length > 0,
-            fileWarnings: anthropicModelSupport.warnings.length > 0 ? anthropicModelSupport.warnings : undefined,
-            attachedFiles: anthropicResponse.data.attachedFiles
+          second: secondResponse.success && secondResponse.data ? {
+            provider: secondProvider,
+            response: secondResponse.data.response,
+            model: secondResponse.data.model,
+            temperature: secondResponse.data.temperature,
+            filesProcessed: secondModelSupport.canProcess && files.length > 0,
+            fileWarnings: secondModelSupport.warnings.length > 0 ? secondModelSupport.warnings : undefined,
+            attachedFiles: secondResponse.data.attachedFiles
           } : {
-            response: anthropicResponse.error || 'Error desconocido',
-            model: request.anthropicModel || 'claude-3-5-haiku-latest',
-            temperature: request.anthropicTemperature || 0.7,
-            fileWarnings: anthropicModelSupport.warnings.length > 0 ? anthropicModelSupport.warnings : undefined,
+            provider: secondProvider,
+            response: secondResponse.error || 'Error desconocido',
+            model: secondModel,
+            temperature: secondTemperature,
+            fileWarnings: secondModelSupport.warnings.length > 0 ? secondModelSupport.warnings : undefined,
             attachedFiles: files.length > 0 ? files.map(file => ({ name: file.name, type: file.type })) : undefined
           }
         }
@@ -197,7 +246,23 @@ export class LLMController {
 
   public async streamResponse(req: Request, res: Response): Promise<void> {
     try {
-      const { prompt, provider, model, temperature, openaiModel, anthropicModel, openaiTemperature, anthropicTemperature, fileIds } = req.body;
+      const { 
+        prompt, 
+        provider, 
+        model, 
+        temperature, 
+        firstProvider, 
+        secondProvider,
+        openaiModel, 
+        geminiModel,
+        anthropicModel, 
+        grokModel,
+        openaiTemperature, 
+        geminiTemperature,
+        anthropicTemperature, 
+        grokTemperature,
+        fileIds 
+      } = req.body;
 
       if (!prompt) {
         res.status(400).json({
@@ -207,10 +272,10 @@ export class LLMController {
         return;
       }
 
-      if (!provider || !['openai', 'anthropic', 'dual'].includes(provider)) {
+      if (!provider || !['openai', 'anthropic', 'gemini', 'grok', 'dual'].includes(provider)) {
         res.status(400).json({
           success: false,
-          error: 'Provider debe ser: openai, anthropic o dual'
+          error: 'Provider debe ser: openai, anthropic, gemini, grok o dual'
         });
         return;
       }
@@ -226,25 +291,52 @@ export class LLMController {
       // Incrementar estadísticas
       this.statisticsService.incrementPromptCount();
 
+      // Auto-select best model for files if individual provider streaming
+      let actualModel = model;
+      if (['openai', 'anthropic', 'gemini', 'grok'].includes(provider)) {
+        const bestModel = getBestModelForFiles(provider as any, files, model);
+        if (bestModel !== model) {
+          console.log(`🔄 Auto-selected ${bestModel} instead of ${model} for ${provider} streaming due to file requirements`);
+          actualModel = bestModel;
+        }
+      }
+
       if (provider === 'openai') {
-        await this.openaiService.generateStreamResponse({ prompt, model, temperature, files }, res);
+        await this.openaiService.generateStreamResponse({ prompt, model: actualModel, temperature, files }, res);
       } else if (provider === 'anthropic') {
-        await this.anthropicService.generateStreamResponse({ prompt, model, temperature, files }, res);
+        await this.anthropicService.generateStreamResponse({ prompt, model: actualModel, temperature, files }, res);
+      } else if (provider === 'gemini') {
+        await this.geminiService.generateStreamResponse({ prompt, model: actualModel, temperature, files }, res);
+      } else if (provider === 'grok') {
+        await this.grokService.generateStreamResponse({ prompt, model: actualModel, temperature, files }, res);
       } else if (provider === 'dual') {
-        // Use services instead of raw clients to ensure proper file handling
-        await StreamHelper.handleDualStream(
-          this.openaiService,
-          this.anthropicService,
-          {
-            prompt,
-            openaiModel: openaiModel || 'gpt-4o-mini-2024-07-18',
-            anthropicModel: anthropicModel || 'claude-3-5-haiku-latest',
-            openaiTemperature: openaiTemperature || temperature || 0.7,
-            anthropicTemperature: anthropicTemperature || temperature || 0.7,
-            files: files.length > 0 ? files : undefined
-          },
-          res
-        );
+        // Determine providers for dual mode
+        const actualFirstProvider = firstProvider || 'openai';
+        const actualSecondProvider = secondProvider || 'anthropic';
+        
+        // For now, only support OpenAI + Anthropic dual streaming
+        // TODO: Expand StreamHelper to support all provider combinations
+        if (actualFirstProvider === 'openai' && actualSecondProvider === 'anthropic') {
+          await StreamHelper.handleDualStream(
+            this.openaiService,
+            this.anthropicService,
+            {
+              prompt,
+              openaiModel: openaiModel || 'gpt-4o-mini-2024-07-18',
+              anthropicModel: anthropicModel || 'claude-3-5-haiku-latest',
+              openaiTemperature: openaiTemperature || temperature || 0.7,
+              anthropicTemperature: anthropicTemperature || temperature || 0.7,
+              files: files.length > 0 ? files : undefined
+            },
+            res
+          );
+        } else {
+          // Fall back to non-streaming for unsupported provider combinations
+          res.status(400).json({
+            success: false,
+            error: `Streaming dual mode not yet supported for ${actualFirstProvider} + ${actualSecondProvider}. Please use non-streaming mode.`
+          });
+        }
       }
     } catch (error) {
       console.error('Error in streamResponse:', error);
@@ -261,8 +353,12 @@ export class LLMController {
     res.json({
       success: true,
       data: {
+        // First box providers
         openai: this.openaiService.getAvailableModels(),
-        anthropic: this.anthropicService.getAvailableModels()
+        gemini: this.geminiService.getAvailableModels(),
+        // Second box providers
+        anthropic: this.anthropicService.getAvailableModels(),
+        grok: this.grokService.getAvailableModels()
       }
     });
   }

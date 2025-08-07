@@ -20,6 +20,7 @@
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
+    "@google/generative-ai": "^0.24.1",
     "@types/katex": "^0.16.7",
     "@types/multer": "^2.0.0",
     "@types/pdf-parse": "^1.1.5",
