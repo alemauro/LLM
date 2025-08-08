@@ -157,9 +157,34 @@ const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, onCancel, loading, 
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' && e.ctrlKey) {
-      e.preventDefault();
-      handleSubmit(e as any);
+    if (e.key === 'Enter') {
+      if (e.ctrlKey) {
+        // Ctrl+Enter to submit
+        e.preventDefault();
+        handleSubmit(e as any);
+      } else {
+        // Regular Enter to insert line break
+        e.preventDefault();
+        
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          
+          // Insert a line break
+          const br = document.createElement('br');
+          range.insertNode(br);
+          
+          // Move cursor after the line break
+          range.setStartAfter(br);
+          range.setEndAfter(br);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          
+          // Trigger input handler to update state
+          setTimeout(() => handleInput(), 0);
+        }
+      }
     }
   };
 
