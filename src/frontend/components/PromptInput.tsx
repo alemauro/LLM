@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import FileUpload from './FileUpload';
 
 interface PromptInputProps {
@@ -12,6 +12,139 @@ const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, onCancel, loading, 
   const [prompt, setPrompt] = useState('');
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const contentEditableRef = useRef<HTMLDivElement>(null);
+  const isComposing = useRef(false);
+  const lastCursorPosition = useRef(0);
+
+  // Auto-focus on mount
+  useEffect(() => {
+    contentEditableRef.current?.focus();
+  }, []);
+
+  // Apply syntax highlighting
+  const applyHighlighting = (text: string): string => {
+    // Escape HTML to prevent XSS
+    const escapeHtml = (str: string) => {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    };
+
+    // First escape the entire text
+    let highlightedText = escapeHtml(text);
+    
+    // Pattern to match INSTRUCCIÓN/INSTRUCCION, CONTEXTO, INPUT, OUTPUT with variations
+    // This regex handles spaces, quotes (single, double, triple) and content
+    const pattern = /(INSTRUCCI[ÓO]N|CONTEXTO|INPUT|OUTPUT)(\s*)(=)(\s*)(["']{1,3})(.*?)\5/gi;
+    
+    highlightedText = highlightedText.replace(pattern, (match, keyword, space1, equals, space2, quotes, content) => {
+      const keywordColor = getKeywordColor(keyword.toUpperCase().replace('Ó', 'O'));
+      return `<span style="color: ${keywordColor}; font-weight: 700;">${keyword}</span>${space1}<span style="color: #6b7280;">${equals}</span>${space2}<span style="color: #059669;">${quotes}</span><span style="color: #1e40af; background-color: rgba(59, 130, 246, 0.08); padding: 0 2px; border-radius: 2px;">${content}</span><span style="color: #059669;">${quotes}</span>`;
+    });
+    
+    return highlightedText;
+  };
+
+  const getKeywordColor = (keyword: string): string => {
+    switch(keyword) {
+      case 'INSTRUCCION': return '#dc2626';
+      case 'CONTEXTO': return '#7c2d12';
+      case 'INPUT': return '#1e40af';
+      case 'OUTPUT': return '#6d28d9';
+      default: return '#111827';
+    }
+  };
+
+  // Get cursor position
+  const getCursorPosition = (): number => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return 0;
+    
+    const range = selection.getRangeAt(0);
+    const clonedRange = range.cloneRange();
+    
+    if (contentEditableRef.current) {
+      clonedRange.selectNodeContents(contentEditableRef.current);
+      clonedRange.setEnd(range.endContainer, range.endOffset);
+      return clonedRange.toString().length;
+    }
+    
+    return 0;
+  };
+
+  // Set cursor position
+  const setCursorPosition = (position: number) => {
+    if (!contentEditableRef.current) return;
+    
+    const selection = window.getSelection();
+    if (!selection) return;
+    
+    let charCount = 0;
+    const stack: { node: Node, charCount: number }[] = [{ node: contentEditableRef.current, charCount: 0 }];
+    let foundNode: Node | null = null;
+    let foundOffset = 0;
+    
+    // Find the text node and offset for the position
+    while (stack.length > 0 && !foundNode) {
+      const { node } = stack.pop()!;
+      
+      if (node.nodeType === Node.TEXT_NODE) {
+        const nodeLength = node.textContent?.length || 0;
+        if (charCount + nodeLength >= position) {
+          foundNode = node;
+          foundOffset = position - charCount;
+        } else {
+          charCount += nodeLength;
+        }
+      } else if (node.childNodes) {
+        // Add child nodes to stack in reverse order
+        for (let i = node.childNodes.length - 1; i >= 0; i--) {
+          stack.push({ node: node.childNodes[i], charCount });
+        }
+      }
+    }
+    
+    // Set the cursor position
+    if (foundNode) {
+      try {
+        const range = document.createRange();
+        range.setStart(foundNode, Math.min(foundOffset, foundNode.textContent?.length || 0));
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } catch (e) {
+        // Fallback to end of content
+        selection.selectAllChildren(contentEditableRef.current);
+        selection.collapseToEnd();
+      }
+    } else {
+      // Fallback to end of content
+      selection.selectAllChildren(contentEditableRef.current);
+      selection.collapseToEnd();
+    }
+  };
+
+  // Handle content change with delayed highlighting
+  const handleInput = () => {
+    if (!contentEditableRef.current || isComposing.current) return;
+    
+    const text = contentEditableRef.current.innerText || '';
+    setPrompt(text);
+    
+    // Store cursor position
+    lastCursorPosition.current = getCursorPosition();
+    
+    // Apply highlighting with a delay to avoid cursor jumping
+    requestAnimationFrame(() => {
+      if (!contentEditableRef.current) return;
+      
+      const currentText = contentEditableRef.current.innerText || '';
+      if (currentText === text) {
+        contentEditableRef.current.innerHTML = applyHighlighting(text);
+        setCursorPosition(lastCursorPosition.current);
+      }
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,10 +156,44 @@ const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, onCancel, loading, 
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault();
       handleSubmit(e as any);
     }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    
+    // Insert text at cursor position
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      
+      const textNode = document.createTextNode(text);
+      range.insertNode(textNode);
+      
+      // Move cursor to end of inserted text
+      range.setStartAfter(textNode);
+      range.setEndAfter(textNode);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    
+    // Trigger input handler
+    setTimeout(() => handleInput(), 0);
+  };
+
+  const handleCompositionStart = () => {
+    isComposing.current = true;
+  };
+
+  const handleCompositionEnd = () => {
+    isComposing.current = false;
+    handleInput();
   };
 
   const handleFilesSelected = (files: File[]) => {
@@ -36,16 +203,24 @@ const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, onCancel, loading, 
   return (
     <form onSubmit={handleSubmit} className="prompt-input-container">
       <div className="prompt-input-row">
-        <label className="prompt-label">Prompt:</label>
+        <label className="prompt-label">User Prompt:</label>
         <div className="prompt-input-with-files">
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+          <div 
+            ref={contentEditableRef}
+            contentEditable={!loading}
+            onInput={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder="Escribe aquí tu prompt para los modelos de lenguaje..."
-            className={`prompt-textarea ${selectedFiles.length > 0 ? 'prompt-with-files' : ''}`}
-            rows={3}
-            disabled={loading}
+            onPaste={handlePaste}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
+            className="prompt-editable"
+            data-placeholder="Ingresa tu prompt aquí..."
+            suppressContentEditableWarning={true}
+            style={{
+              minHeight: '160px',
+              maxHeight: '400px',
+              overflowY: 'auto',
+            }}
           />
           {selectedFiles.length > 0 && (
             <span className="files-attached-indicator">
@@ -90,6 +265,9 @@ const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, onCancel, loading, 
           type="button"
           onClick={() => {
             setPrompt('');
+            if (contentEditableRef.current) {
+              contentEditableRef.current.innerHTML = '';
+            }
             setSelectedFiles([]);
             setShowFileUpload(false);
           }}

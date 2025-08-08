@@ -147,30 +147,56 @@ body {
 
 .prompt-label {
   display: block;
-  font-weight: 500;
+  font-weight: 600;
   color: #111827;
-  margin-bottom: 0.5rem;
-}
-
-.prompt-textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.375rem;
   font-size: 1rem;
-  resize: vertical;
-  transition: border-color 0.2s;
+  margin-bottom: 0.75rem;
 }
 
-.prompt-textarea:focus {
+.prompt-editable {
+  width: 100%;
+  padding: 0.875rem;
+  border: 2px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  line-height: 1.6;
+  background-color: #ffffff;
+  transition: all 0.2s;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.prompt-editable:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.prompt-textarea:disabled {
+.prompt-editable[contenteditable="false"] {
   background-color: #f9fafb;
   cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Placeholder for contenteditable */
+.prompt-editable:empty:before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  font-size: 0.875rem;
+  pointer-events: none;
+}
+
+/* Hide placeholder when focused even if empty */
+.prompt-editable:focus:empty:before {
+  content: attr(data-placeholder);
+}
+
+/* Ensure spans inside contenteditable don't break layout */
+.prompt-editable span {
+  display: inline;
+  line-height: inherit;
 }
 
 .prompt-actions {
