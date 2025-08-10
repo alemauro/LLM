@@ -14,7 +14,7 @@ function App() {
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [responses, setResponses] = useState<DualLLMResponse | null>(null);
-  const [streamingResponses, setStreamingResponses] = useState<{ first: string; second: string }>({ first: '', second: '' });
+  const [streamingResponses, setStreamingResponses] = useState<string[]>(['', '']);
   const [streamingFiles, setStreamingFiles] = useState<Array<{ name: string; type: 'image' | 'pdf' }>>();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [fileWarnings, setFileWarnings] = useState<string[]>([]);
@@ -23,24 +23,67 @@ function App() {
   const [isCancelling, setIsCancelling] = useState(false);
   const useStreaming = true; // Always use streaming
   
-  // Provider selection
-  const [firstProvider, setFirstProvider] = useState<'openai' | 'gemini'>('openai');
-  const [secondProvider, setSecondProvider] = useState<'anthropic' | 'grok'>('anthropic');
+  // Provider selection - now any provider can be in any box (2 boxes)
+  const [providers, setProviders] = useState<Array<'openai' | 'gemini' | 'anthropic' | 'grok'>>(['openai', 'anthropic']);
   
-  // Model configuration
-  const [openaiModel, setOpenaiModel] = useState('gpt-4o-mini-2024-07-18');
-  const [geminiModel, setGeminiModel] = useState('gemini-2.0-flash-lite');
-  const [anthropicModel, setAnthropicModel] = useState('claude-3-5-haiku-latest');
-  const [grokModel, setGrokModel] = useState('grok-2-vision-1212');
+  // Model configuration for each box (2 boxes)
+  const [models, setModels] = useState<string[]>([
+    'gpt-4o-mini-2024-07-18',     // Box 1 default (OpenAI)
+    'claude-3-5-haiku-latest'      // Box 2 default (Anthropic)
+  ]);
   
-  // Temperature configuration
-  const [openaiTemperature, setOpenaiTemperature] = useState(0.7);
-  const [geminiTemperature, setGeminiTemperature] = useState(0.7);
-  const [anthropicTemperature, setAnthropicTemperature] = useState(0.7);
-  const [grokTemperature, setGrokTemperature] = useState(0.7);
+  // Temperature configuration for each box (2 boxes)
+  const [temperatures, setTemperatures] = useState<number[]>([0.7, 0.7]);
 
   const { statistics, refetch: refetchStatistics } = useStatistics();
   const { openaiModels, geminiModels, anthropicModels, grokModels } = useModels();
+
+  // Helper functions for managing providers and models
+  const setProviderForBox = (boxIndex: number, provider: 'openai' | 'gemini' | 'anthropic' | 'grok') => {
+    const newProviders = [...providers];
+    newProviders[boxIndex] = provider;
+    setProviders(newProviders);
+    
+    // Auto-select appropriate model for the new provider
+    const newModels = [...models];
+    switch (provider) {
+      case 'openai':
+        newModels[boxIndex] = openaiModels[0] || 'gpt-4o-mini-2024-07-18';
+        break;
+      case 'anthropic':
+        newModels[boxIndex] = anthropicModels[0] || 'claude-3-5-haiku-latest';
+        break;
+      case 'gemini':
+        newModels[boxIndex] = geminiModels[0] || 'gemini-2.0-flash-lite';
+        break;
+      case 'grok':
+        newModels[boxIndex] = grokModels[0] || 'grok-2-vision-1212';
+        break;
+    }
+    setModels(newModels);
+  };
+
+  const setModelForBox = (boxIndex: number, model: string) => {
+    const newModels = [...models];
+    newModels[boxIndex] = model;
+    setModels(newModels);
+  };
+
+  const setTemperatureForBox = (boxIndex: number, temperature: number) => {
+    const newTemperatures = [...temperatures];
+    newTemperatures[boxIndex] = temperature;
+    setTemperatures(newTemperatures);
+  };
+
+  const getModelsForProvider = (provider: 'openai' | 'gemini' | 'anthropic' | 'grok') => {
+    switch (provider) {
+      case 'openai': return openaiModels;
+      case 'anthropic': return anthropicModels;
+      case 'gemini': return geminiModels;
+      case 'grok': return grokModels;
+      default: return [];
+    }
+  };
 
   // Auto-adjust models when providers change and files are uploaded
   React.useEffect(() => {
@@ -50,43 +93,30 @@ function App() {
     const files = uploadedFiles.map(f => new File([], f.name, { type: f.type }));
     
     const notifications: string[] = [];
+    const newModels = [...models];
     
-    // Check first provider model compatibility
-    const currentFirstModel = firstProvider === 'openai' ? openaiModel : geminiModel;
-    const firstModelCheck = canModelProcessFiles(currentFirstModel, files);
-    
-    if (!firstModelCheck.canProcess) {
-      const bestFirstModel = getBestModelForFiles(firstProvider, files, currentFirstModel);
-      if (bestFirstModel !== currentFirstModel) {
-        if (firstProvider === 'openai') {
-          setOpenaiModel(bestFirstModel);
-        } else {
-          setGeminiModel(bestFirstModel);
+    // Check each box's model compatibility
+    providers.forEach((provider, index) => {
+      const currentModel = models[index];
+      const modelCheck = canModelProcessFiles(currentModel, files);
+      
+      if (!modelCheck.canProcess) {
+        const bestModel = getBestModelForFiles(provider, files, currentModel);
+        if (bestModel !== currentModel) {
+          newModels[index] = bestModel;
+          const providerName = provider === 'openai' ? 'OpenAI' : 
+                               provider === 'anthropic' ? 'Anthropic' : 
+                               provider === 'gemini' ? 'Gemini' : 'Grok';
+          notifications.push(`📝 Box ${index + 1}: Cambiado modelo ${providerName} a ${bestModel} por compatibilidad con archivos`);
         }
-        notifications.push(`📝 Cambiado modelo ${firstProvider === 'openai' ? 'OpenAI' : 'Gemini'} a ${bestFirstModel} por compatibilidad con archivos`);
       }
-    }
-    
-    // Check second provider model compatibility  
-    const currentSecondModel = secondProvider === 'anthropic' ? anthropicModel : grokModel;
-    const secondModelCheck = canModelProcessFiles(currentSecondModel, files);
-    
-    if (!secondModelCheck.canProcess) {
-      const bestSecondModel = getBestModelForFiles(secondProvider, files, currentSecondModel);
-      if (bestSecondModel !== currentSecondModel) {
-        if (secondProvider === 'anthropic') {
-          setAnthropicModel(bestSecondModel);
-        } else {
-          setGrokModel(bestSecondModel);
-        }
-        notifications.push(`📝 Cambiado modelo ${secondProvider === 'anthropic' ? 'Anthropic' : 'Grok'} a ${bestSecondModel} por compatibilidad con archivos`);
-      }
-    }
+    });
     
     if (notifications.length > 0) {
+      setModels(newModels);
       setModelChangeNotifications(notifications);
     }
-  }, [firstProvider, secondProvider, uploadedFiles]);
+  }, [providers, uploadedFiles]);
 
   const handleCancelGeneration = () => {
     if (abortController) {
@@ -112,7 +142,7 @@ function App() {
     setLoading(true);
     setIsCancelling(false);
     setResponses(null);
-    setStreamingResponses({ first: '', second: '' });
+    setStreamingResponses(['', '']);
     setStreamingFiles(undefined);
     setFileWarnings([]);
     setModelChangeNotifications([]);
@@ -130,32 +160,21 @@ function App() {
           // Auto-select best models for uploaded files
           const notifications: string[] = [];
           
-          // Check first provider model
-          const bestFirstModel = getBestModelForFiles(firstProvider, files, 
-            firstProvider === 'openai' ? openaiModel : geminiModel);
-          const currentFirstModel = firstProvider === 'openai' ? openaiModel : geminiModel;
-          
-          if (bestFirstModel !== currentFirstModel) {
-            if (firstProvider === 'openai') {
-              setOpenaiModel(bestFirstModel);
-            } else {
-              setGeminiModel(bestFirstModel);
+          // Check all boxes for best model compatibility
+          const newModels = [...models];
+          providers.forEach((provider, index) => {
+            const bestModel = getBestModelForFiles(provider, files, models[index]);
+            if (bestModel !== models[index]) {
+              newModels[index] = bestModel;
+              const providerName = provider === 'openai' ? 'OpenAI' : 
+                                   provider === 'anthropic' ? 'Anthropic' : 
+                                   provider === 'gemini' ? 'Gemini' : 'Grok';
+              notifications.push(`📝 Box ${index + 1}: Auto-seleccionado modelo ${bestModel} para ${providerName} para mejor compatibilidad con archivos`);
             }
-            notifications.push(`📝 Auto-seleccionado modelo ${bestFirstModel} para ${firstProvider === 'openai' ? 'OpenAI' : 'Gemini'} para mejor compatibilidad con archivos`);
-          }
+          });
           
-          // Check second provider model
-          const bestSecondModel = getBestModelForFiles(secondProvider, files, 
-            secondProvider === 'anthropic' ? anthropicModel : grokModel);
-          const currentSecondModel = secondProvider === 'anthropic' ? anthropicModel : grokModel;
-          
-          if (bestSecondModel !== currentSecondModel) {
-            if (secondProvider === 'anthropic') {
-              setAnthropicModel(bestSecondModel);
-            } else {
-              setGrokModel(bestSecondModel);
-            }
-            notifications.push(`📝 Auto-seleccionado modelo ${bestSecondModel} para ${secondProvider === 'anthropic' ? 'Anthropic' : 'Grok'} para mejor compatibilidad con archivos`);
+          if (JSON.stringify(newModels) !== JSON.stringify(models)) {
+            setModels(newModels);
           }
           
           setModelChangeNotifications(notifications);
@@ -174,128 +193,81 @@ function App() {
     }
     
     try {
-      // Check if streaming dual mode is supported for the current provider combination
-      const supportsStreamingDual = (firstProvider === 'openai' && secondProvider === 'anthropic');
-      
-      if (useStreaming && supportsStreamingDual) {
-        // Modo streaming dual (solo OpenAI + Anthropic por ahora)
-        await api.streamResponse(
-          {
-            prompt,
-            provider: 'dual',
-            firstProvider,
-            secondProvider,
-            openaiModel: firstProvider === 'openai' ? openaiModel : undefined,
-            geminiModel: firstProvider === 'gemini' ? geminiModel : undefined,
-            anthropicModel: secondProvider === 'anthropic' ? anthropicModel : undefined,
-            grokModel: secondProvider === 'grok' ? grokModel : undefined,
-            openaiTemperature: firstProvider === 'openai' ? openaiTemperature : undefined,
-            geminiTemperature: firstProvider === 'gemini' ? geminiTemperature : undefined,
-            anthropicTemperature: secondProvider === 'anthropic' ? anthropicTemperature : undefined,
-            grokTemperature: secondProvider === 'grok' ? grokTemperature : undefined,
-            fileIds: fileIds.length > 0 ? fileIds : undefined
-          },
-          {
-            onFirstChunk: (chunk) => {
-              setStreamingResponses(prev => ({ ...prev, first: prev.first + chunk }));
-            },
-            onSecondChunk: (chunk) => {
-              setStreamingResponses(prev => ({ ...prev, second: prev.second + chunk }));
-            },
-            onFilesInfo: (files) => {
-              setStreamingFiles(files);
-            },
-            onError: (error) => {
-              console.error('Streaming error:', error);
-              setResponses({
-                success: false,
-                error: `Error en streaming: ${error}`
-              });
-            },
-            onComplete: () => {
-              refetchStatistics();
-              setAbortController(null);
-              // Pequeño delay para mostrar el cursor al final
-              setTimeout(() => setLoading(false), 500);
-            }
-          },
-          newAbortController.signal
-        );
-      } else if (useStreaming && !supportsStreamingDual) {
-        // Modo streaming individual para combinaciones no soportadas en dual
-        console.log(`🔄 Using individual streaming for ${firstProvider} + ${secondProvider}`);
+      if (useStreaming) {
+        // Streaming mode - handle 2 parallel streams
+        console.log(`🔄 Using parallel streaming for ${providers.join(', ')}`);
         
-        // Parallel individual streaming
-        const firstModel = firstProvider === 'openai' ? openaiModel : geminiModel;
-        const secondModel = secondProvider === 'anthropic' ? anthropicModel : grokModel;
-        const firstTemperature = firstProvider === 'openai' ? openaiTemperature : geminiTemperature;
-        const secondTemperature = secondProvider === 'anthropic' ? anthropicTemperature : grokTemperature;
+        // Create stream promises for both boxes
+        const streamPromises = providers.map((provider, index) => {
+          const model = models[index];
+          const temperature = temperatures[index];
+          
+          return api.streamResponse(
+            {
+              prompt,
+              provider,
+              model,
+              temperature,
+              fileIds: fileIds.length > 0 ? fileIds : undefined
+            },
+            {
+              onFirstChunk: (chunk) => {
+                setStreamingResponses(prev => {
+                  const newResponses = [...prev];
+                  newResponses[index] = newResponses[index] + chunk;
+                  return newResponses;
+                });
+              },
+              onOpenAIChunk: (chunk) => {
+                if (provider === 'openai') {
+                  setStreamingResponses(prev => {
+                    const newResponses = [...prev];
+                    newResponses[index] = newResponses[index] + chunk;
+                    return newResponses;
+                  });
+                }
+              },
+              onAnthropicChunk: (chunk) => {
+                if (provider === 'anthropic') {
+                  setStreamingResponses(prev => {
+                    const newResponses = [...prev];
+                    newResponses[index] = newResponses[index] + chunk;
+                    return newResponses;
+                  });
+                }
+              },
+              onFilesInfo: (files) => {
+                if (index === 0) { // Only set files info once
+                  setStreamingFiles(files);
+                }
+              },
+              onError: (error) => {
+                console.error(`${provider} (Box ${index + 1}) streaming error:`, error);
+              }
+            },
+            newAbortController.signal
+          );
+        });
         
-        // Start both streams in parallel
-        const firstStreamPromise = api.streamResponse(
-          {
-            prompt,
-            provider: firstProvider,
-            model: firstModel,
-            temperature: firstTemperature,
-            fileIds: fileIds.length > 0 ? fileIds : undefined
-          },
-          {
-            onFirstChunk: (chunk) => {
-              setStreamingResponses(prev => ({ ...prev, first: prev.first + chunk }));
-            },
-            onOpenAIChunk: (chunk) => {
-              setStreamingResponses(prev => ({ ...prev, first: prev.first + chunk }));
-            },
-            onFilesInfo: (files) => {
-              setStreamingFiles(files);
-            },
-            onError: (error) => {
-              console.error(`${firstProvider} streaming error:`, error);
-            }
-          }
-        );
-        
-        const secondStreamPromise = api.streamResponse(
-          {
-            prompt,
-            provider: secondProvider,
-            model: secondModel, 
-            temperature: secondTemperature,
-            fileIds: fileIds.length > 0 ? fileIds : undefined
-          },
-          {
-            onSecondChunk: (chunk) => {
-              setStreamingResponses(prev => ({ ...prev, second: prev.second + chunk }));
-            },
-            onAnthropicChunk: (chunk) => {
-              setStreamingResponses(prev => ({ ...prev, second: prev.second + chunk }));
-            },
-            onError: (error) => {
-              console.error(`${secondProvider} streaming error:`, error);
-            }
-          }
-        );
-        
-        // Wait for both streams to complete
-        await Promise.all([firstStreamPromise, secondStreamPromise]);
+        // Wait for all streams to complete
+        await Promise.all(streamPromises);
         refetchStatistics();
         setAbortController(null);
         setTimeout(() => setLoading(false), 500);
       } else {
-        // Modo normal (sin streaming)
+        // Non-streaming mode - for backward compatibility, just use the first 2 boxes
         const response = await api.generateDualResponse({
           prompt,
-          firstProvider,
-          secondProvider,
-          openaiModel: firstProvider === 'openai' ? openaiModel : undefined,
-          geminiModel: firstProvider === 'gemini' ? geminiModel : undefined,
-          anthropicModel: secondProvider === 'anthropic' ? anthropicModel : undefined,
-          grokModel: secondProvider === 'grok' ? grokModel : undefined,
-          openaiTemperature: firstProvider === 'openai' ? openaiTemperature : undefined,
-          geminiTemperature: firstProvider === 'gemini' ? geminiTemperature : undefined,
-          anthropicTemperature: secondProvider === 'anthropic' ? anthropicTemperature : undefined,
-          grokTemperature: secondProvider === 'grok' ? grokTemperature : undefined,
+          firstProvider: providers[0],
+          secondProvider: providers[1],
+          openaiModel: providers[0] === 'openai' ? models[0] : undefined,
+          geminiModel: providers[0] === 'gemini' ? models[0] : undefined,
+          anthropicModel: providers[1] === 'anthropic' ? models[1] : undefined,
+          grokModel: providers[1] === 'grok' ? models[1] : undefined,
+          openaiTemperature: providers[0] === 'openai' ? temperatures[0] : undefined,
+          geminiTemperature: providers[0] === 'gemini' ? temperatures[0] : undefined,
+          anthropicTemperature: providers[1] === 'anthropic' ? temperatures[1] : undefined,
+          grokTemperature: providers[1] === 'grok' ? temperatures[1] : undefined,
           fileIds: fileIds.length > 0 ? fileIds : undefined
         }, newAbortController.signal);
         
@@ -343,33 +315,28 @@ function App() {
           />
 
           <div className="responses-grid">
-            <LLMResponseBox
-              provider={firstProvider}
-              availableProviders={['openai', 'gemini']}
-              response={useStreaming ? streamingResponses.first : (responses?.data?.first.response || '')}
-              model={firstProvider === 'openai' ? openaiModel : geminiModel}
-              temperature={firstProvider === 'openai' ? openaiTemperature : geminiTemperature}
-              models={firstProvider === 'openai' ? openaiModels : geminiModels}
-              loading={loading}
-              attachedFiles={useStreaming ? streamingFiles : responses?.data?.first.attachedFiles}
-              onProviderChange={(provider) => setFirstProvider(provider as 'openai' | 'gemini')}
-              onModelChange={firstProvider === 'openai' ? setOpenaiModel : setGeminiModel}
-              onTemperatureChange={firstProvider === 'openai' ? setOpenaiTemperature : setGeminiTemperature}
-            />
-
-            <LLMResponseBox
-              provider={secondProvider}
-              availableProviders={['anthropic', 'grok']}
-              response={useStreaming ? streamingResponses.second : (responses?.data?.second.response || '')}
-              model={secondProvider === 'anthropic' ? anthropicModel : grokModel}
-              temperature={secondProvider === 'anthropic' ? anthropicTemperature : grokTemperature}
-              models={secondProvider === 'anthropic' ? anthropicModels : grokModels}
-              loading={loading}
-              attachedFiles={useStreaming ? streamingFiles : responses?.data?.second.attachedFiles}
-              onProviderChange={(provider) => setSecondProvider(provider as 'anthropic' | 'grok')}
-              onModelChange={secondProvider === 'anthropic' ? setAnthropicModel : setGrokModel}
-              onTemperatureChange={secondProvider === 'anthropic' ? setAnthropicTemperature : setGrokTemperature}
-            />
+            {providers.map((provider, index) => (
+              <LLMResponseBox
+                key={index}
+                provider={provider}
+                availableProviders={['openai', 'anthropic', 'gemini', 'grok']}
+                response={useStreaming 
+                  ? streamingResponses[index] 
+                  : (index === 0 ? responses?.data?.first.response || '' 
+                    : index === 1 ? responses?.data?.second.response || '' 
+                    : '')}
+                model={models[index]}
+                temperature={temperatures[index]}
+                models={getModelsForProvider(provider)}
+                loading={loading}
+                attachedFiles={useStreaming ? streamingFiles : 
+                  (index === 0 ? responses?.data?.first.attachedFiles : 
+                   index === 1 ? responses?.data?.second.attachedFiles : undefined)}
+                onProviderChange={(newProvider) => setProviderForBox(index, newProvider as 'openai' | 'anthropic' | 'gemini' | 'grok')}
+                onModelChange={(model) => setModelForBox(index, model)}
+                onTemperatureChange={(temp) => setTemperatureForBox(index, temp)}
+              />
+            ))}
           </div>
 
           {modelChangeNotifications.length > 0 && (
@@ -429,11 +396,13 @@ function App() {
         <div className="modal-text">
           <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: '#111827' }}>✨ Funcionalidades</h3>
           <ul style={{ marginLeft: '1.5rem' }}>
-            <li>Comparación simultánea de respuestas de dos LLM</li>
-            <li>Selección dinámica de modelos</li>
+            <li>Comparación simultánea de 2 respuestas LLM</li>
+            <li>Cualquier proveedor puede ser seleccionado en cualquier caja</li>
+            <li>Permite ejecutar el mismo modelo múltiples veces para comparar variaciones</li>
+            <li>Selección dinámica de modelos y proveedores</li>
             <li>Ajuste de temperatura para controlar la creatividad</li>
             <li>Contador de prompts generados</li>
-            <li>Interfaz bilingüe optimizada</li>
+            <li>Soporte completo para archivos multimodales</li>
           </ul>
         </div>
 

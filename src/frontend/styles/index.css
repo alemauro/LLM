@@ -279,7 +279,7 @@ body {
   color: #9ca3af;
 }
 
-/* Responses Grid */
+/* Responses Grid - 2 column layout for flexible providers */
 .responses-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
