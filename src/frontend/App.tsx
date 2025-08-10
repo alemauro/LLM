@@ -218,24 +218,6 @@ function App() {
                   return newResponses;
                 });
               },
-              onOpenAIChunk: (chunk) => {
-                if (provider === 'openai') {
-                  setStreamingResponses(prev => {
-                    const newResponses = [...prev];
-                    newResponses[index] = newResponses[index] + chunk;
-                    return newResponses;
-                  });
-                }
-              },
-              onAnthropicChunk: (chunk) => {
-                if (provider === 'anthropic') {
-                  setStreamingResponses(prev => {
-                    const newResponses = [...prev];
-                    newResponses[index] = newResponses[index] + chunk;
-                    return newResponses;
-                  });
-                }
-              },
               onFilesInfo: (files) => {
                 if (index === 0) { // Only set files info once
                   setStreamingFiles(files);

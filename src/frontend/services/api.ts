@@ -109,16 +109,24 @@ export const api = {
                       callbacks.onSecondChunk?.(parsed.second);
                     }
                   } else if (parsed.content) {
+                    // For individual providers, prioritize onFirstChunk over legacy callbacks
+                    // to avoid duplication when both are provided
                     if (parsed.provider === 'openai') {
-                      callbacks.onOpenAIChunk?.(parsed.content);
-                      callbacks.onFirstChunk?.(parsed.content);
+                      if (callbacks.onFirstChunk) {
+                        callbacks.onFirstChunk(parsed.content);
+                      } else if (callbacks.onOpenAIChunk) {
+                        callbacks.onOpenAIChunk(parsed.content);
+                      }
                     } else if (parsed.provider === 'anthropic') {
-                      callbacks.onAnthropicChunk?.(parsed.content);
-                      callbacks.onSecondChunk?.(parsed.content);
+                      if (callbacks.onFirstChunk) {
+                        callbacks.onFirstChunk(parsed.content);
+                      } else if (callbacks.onAnthropicChunk) {
+                        callbacks.onAnthropicChunk(parsed.content);
+                      }
                     } else if (parsed.provider === 'gemini') {
                       callbacks.onFirstChunk?.(parsed.content);
                     } else if (parsed.provider === 'grok') {
-                      callbacks.onSecondChunk?.(parsed.content);
+                      callbacks.onFirstChunk?.(parsed.content);
                     }
                   }
                 }
