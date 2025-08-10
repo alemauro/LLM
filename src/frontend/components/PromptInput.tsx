@@ -34,12 +34,25 @@ const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, onCancel, loading, 
     let highlightedText = escapeHtml(text);
     
     // Pattern to match INSTRUCCIÓN/INSTRUCCION, CONTEXTO, INPUT, OUTPUT with variations
-    // This regex handles spaces, quotes (single, double, triple) and content
-    const pattern = /(INSTRUCCI[ÓO]N|CONTEXTO|INPUT|OUTPUT)(\s*)(=)(\s*)(["']{1,3})(.*?)\5/gi;
+    // Handle triple quotes first, then double, then single quotes
+    // Use separate patterns for better control
+    const patterns = [
+      // Triple quotes (can be empty or with content)
+      /(INSTRUCCI[ÓO]N|CONTEXTO|INPUT|OUTPUT)(\s*)(=)(\s*)("""|''')([\s\S]*?)\5/gi,
+      // Double quotes
+      /(INSTRUCCI[ÓO]N|CONTEXTO|INPUT|OUTPUT)(\s*)(=)(\s*)(")((?:[^"\\]|\\.)*)"/gi,
+      // Single quotes
+      /(INSTRUCCI[ÓO]N|CONTEXTO|INPUT|OUTPUT)(\s*)(=)(\s*)(')((?:[^'\\]|\\.)*)'/gi
+    ];
     
-    highlightedText = highlightedText.replace(pattern, (match, keyword, space1, equals, space2, quotes, content) => {
-      const keywordColor = getKeywordColor(keyword.toUpperCase().replace('Ó', 'O'));
-      return `<span style="color: ${keywordColor}; font-weight: 700;">${keyword}</span>${space1}<span style="color: #6b7280;">${equals}</span>${space2}<span style="color: #059669;">${quotes}</span><span style="color: #1e40af; background-color: rgba(59, 130, 246, 0.08); padding: 0 2px; border-radius: 2px;">${content}</span><span style="color: #059669;">${quotes}</span>`;
+    patterns.forEach(pattern => {
+      highlightedText = highlightedText.replace(pattern, (match, keyword, space1, equals, space2, quotes, content) => {
+        const keywordColor = getKeywordColor(keyword.toUpperCase().replace('Ó', 'O'));
+        const contentHtml = content ? 
+          `<span style="color: #1e40af; background-color: rgba(59, 130, 246, 0.08); padding: 0 2px; border-radius: 2px;">${content}</span>` : 
+          '';
+        return `<span style="color: ${keywordColor}; font-weight: 700;">${keyword}</span>${space1}<span style="color: #6b7280;">${equals}</span>${space2}<span style="color: #059669;">${quotes}</span>${contentHtml}<span style="color: #059669;">${quotes}</span>`;
+      });
     });
     
     return highlightedText;
