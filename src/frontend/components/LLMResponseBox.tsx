@@ -54,6 +54,8 @@ const LLMResponseBox: React.FC<LLMResponseBoxProps> = ({
     grok: 'Grok'
   };
 
+  const allProviders: Array<'openai' | 'anthropic' | 'gemini' | 'grok'> = ['openai', 'anthropic', 'gemini', 'grok'];
+
   const copyToClipboard = async () => {
     if (!response) return;
     
@@ -72,16 +74,17 @@ const LLMResponseBox: React.FC<LLMResponseBoxProps> = ({
     <div className={`llm-response-box ${providerColors[provider]}`}>
       <div className={`llm-response-header ${providerBg[provider]}`}>
         <div className="header-top-row">
-          <div className="provider-title-selector">
-            <select 
-              value={provider}
-              onChange={(e) => onProviderChange(e.target.value as any)}
-              className="provider-title-select"
-            >
-              {availableProviders.map(p => (
-                <option key={p} value={p}>{providerNames[p]}</option>
-              ))}
-            </select>
+          <div className="provider-tabs">
+            {allProviders.map(p => (
+              <button
+                key={p}
+                onClick={() => onProviderChange(p)}
+                className={`provider-tab ${provider === p ? 'active' : ''} ${p}`}
+                title={providerNames[p]}
+              >
+                {providerNames[p]}
+              </button>
+            ))}
           </div>
           <div className="header-actions">
             {(response || loading) && (

@@ -849,35 +849,58 @@ body {
   color: #92400e;
 }
 
-/* Provider Title Selector */
-.provider-title-selector {
+/* Provider Tabs */
+.provider-tabs {
   display: flex;
+  gap: 0.25rem;
   align-items: center;
 }
 
-.provider-title-select {
-  background: none;
-  border: none;
-  font-size: 1.125rem;
+.provider-tab {
+  padding: 0.25rem 0.625rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background-color: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.provider-tab:hover:not(.active) {
+  background-color: rgba(0, 0, 0, 0.03);
+  color: #374151;
+}
+
+.provider-tab.active {
   font-weight: 600;
   color: #111827;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 0.25rem center;
-  background-repeat: no-repeat;
-  background-size: 1rem;
-  padding-right: 2rem;
 }
 
-.provider-title-select:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+/* Provider-specific active styles */
+.provider-tab.openai.active {
+  background-color: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #065f46;
 }
 
-.provider-title-select:focus {
-  outline: none;
-  background-color: rgba(0, 0, 0, 0.05);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+.provider-tab.anthropic.active {
+  background-color: rgba(249, 115, 22, 0.12);
+  border-color: rgba(249, 115, 22, 0.5);
+  color: #9a3412;
+}
+
+.provider-tab.gemini.active {
+  background-color: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #1e3a8a;
+}
+
+.provider-tab.grok.active {
+  background-color: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.5);
+  color: #5b21b6;
 }
